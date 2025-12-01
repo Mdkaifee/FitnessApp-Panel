@@ -87,3 +87,31 @@ export const deleteVideo = (videoId, token) =>
     method: 'DELETE',
     token,
   })
+
+export const fetchQuestions = ({ questionType, gender }, token) => {
+  const params = new URLSearchParams()
+  if (questionType) params.append('question_type', questionType)
+  if (gender) params.append('gender', gender)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return apiRequest(`/questions${query}`, { token })
+}
+
+export const createQuestion = (payload, token) =>
+  apiRequest('/questions', {
+    method: 'POST',
+    body: payload,
+    token,
+  })
+
+export const updateQuestion = (questionId, payload, token) =>
+  apiRequest(`/questions/${questionId}`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
+export const deleteQuestion = (questionId, token) =>
+  apiRequest(`/questions/${questionId}`, {
+    method: 'DELETE',
+    token,
+  })

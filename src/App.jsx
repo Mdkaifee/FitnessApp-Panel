@@ -10,6 +10,10 @@ import {
   uploadVideo,
   updateVideo,
   deleteVideo,
+  fetchQuestions,
+  createQuestion,
+  updateQuestion,
+  deleteQuestion,
 } from './services/api'
 import './App.css'
 
@@ -25,6 +29,15 @@ const VIDEO_GENDERS = [
   { label: 'All genders', value: 'Both' },
   { label: 'Female', value: 'Female' },
   { label: 'Male', value: 'Male' },
+]
+
+const QUESTION_TYPES = [
+  { label: 'All Types', value: '' },
+  { label: 'Weight', value: 'weight' },
+  { label: 'Height', value: 'height' },
+  { label: 'Habits', value: 'habits' },
+  { label: 'Nutrition', value: 'nutrition' },
+  { label: 'Other', value: 'other' },
 ]
 
 function App() {
@@ -54,6 +67,22 @@ function App() {
     description: '',
     videoFile: null,
     thumbnailFile: null,
+  })
+  const [questionsData, setQuestionsData] = useState(null)
+  const [questionsLoading, setQuestionsLoading] = useState(false)
+  const [questionsError, setQuestionsError] = useState(null)
+  const [questionsFilter, setQuestionsFilter] = useState({
+    questionType: '',
+    gender: '',
+  })
+  const [questionPending, setQuestionPending] = useState('')
+  const [questionForm, setQuestionForm] = useState({
+    id: '',
+    prompt: '',
+    answer: '',
+    gender: '',
+    questionType: '',
+    measurementUnits: [''],
   })
   const [updateForm, setUpdateForm] = useState({
     videoId: '',
@@ -172,6 +201,21 @@ function App() {
     [handleApiError, token, videoCategory],
   )
 
+  const loadQuestions = useCallback(async () => {
+    if (!token) return
+    setQuestionsLoading(true)
+    setQuestionsError(null)
+    try {
+      const response = await fetchQuestions(questionsFilter, token)
+      setQuestionsData(response?.data ?? null)
+    } catch (error) {
+      setQuestionsError(error?.message ?? 'Unable to load questions.')
+      handleApiError(error)
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }, [handleApiError, questionsFilter, token])
+
   useEffect(() => {
     if (token) {
       localStorage.setItem(TOKEN_KEY, token)
@@ -205,6 +249,12 @@ function App() {
       loadVideos(videoCategory)
     }
   }, [activeView, isLoggedIn, loadVideos, videoCategory])
+
+  useEffect(() => {
+    if (isLoggedIn && activeView === 'questions') {
+      loadQuestions()
+    }
+  }, [activeView, isLoggedIn, loadQuestions])
 
   useEffect(() => {
     if (resendSeconds <= 0) return undefined
@@ -433,6 +483,120 @@ function App() {
       videoFile: null,
       thumbnailFile: null,
     })
+  }
+
+  const setMeasurementUnitValue = (index, value) => {
+    setQuestionForm((prev) => {
+      const nextUnits = [...prev.measurementUnits]
+      nextUnits[index] = value
+      return { ...prev, measurementUnits: nextUnits }
+    })
+  }
+
+  const addMeasurementUnitField = () =>
+    setQuestionForm((prev) => ({
+      ...prev,
+      measurementUnits: [...prev.measurementUnits, ''],
+    }))
+
+  const removeMeasurementUnitField = (index) =>
+    setQuestionForm((prev) => {
+      const nextUnits = prev.measurementUnits.filter((_, idx) => idx !== index)
+      return { ...prev, measurementUnits: nextUnits.length ? nextUnits : [''] }
+    })
+
+  const resetQuestionForm = () =>
+    setQuestionForm({
+      id: '',
+      prompt: '',
+      answer: '',
+      gender: '',
+      questionType: '',
+      measurementUnits: [''],
+    })
+
+  const prepareQuestionPayload = () => {
+    const payload = {
+      prompt: questionForm.prompt.trim(),
+      answer: questionForm.answer.trim(),
+    }
+    if (questionForm.gender) payload.gender = questionForm.gender
+    if (questionForm.questionType) payload.question_type = questionForm.questionType
+    const requiresUnits =
+      questionForm.questionType === 'weight' || questionForm.questionType === 'height'
+    const units = questionForm.measurementUnits
+      .map((unit) => unit.trim())
+      .filter((unit) => unit.length > 0)
+    if (requiresUnits) {
+      if (units.length === 0) {
+        throw new Error('Provide at least one measurement unit for weight/height questions.')
+      }
+      payload.measurement_units = units
+    } else if (units.length > 0) {
+      payload.measurement_units = units
+    }
+    return payload
+  }
+
+  const handleCreateQuestion = async () => {
+    try {
+      const payload = prepareQuestionPayload()
+      setQuestionPending('create')
+      const response = await createQuestion(payload, token)
+      setStatus({ type: 'success', text: response?.message ?? 'Question created successfully.' })
+      resetQuestionForm()
+      loadQuestions()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setQuestionPending('')
+    }
+  }
+
+  const handleEditQuestion = (question) => {
+    setQuestionForm({
+      id: question.id,
+      prompt: question.prompt ?? '',
+      answer: question.answer ?? '',
+      gender: question.gender ?? '',
+      questionType: question.question_type ?? '',
+      measurementUnits: question.measurement_units && question.measurement_units.length
+        ? question.measurement_units
+        : [''],
+    })
+  }
+
+  const handleUpdateQuestion = async () => {
+    if (!questionForm.id) {
+      setStatus({ type: 'error', text: 'Select a question to update.' })
+      return
+    }
+    try {
+      const payload = prepareQuestionPayload()
+      setQuestionPending('update')
+      const response = await updateQuestion(questionForm.id, payload, token)
+      setStatus({ type: 'success', text: response?.message ?? 'Question updated successfully.' })
+      resetQuestionForm()
+      loadQuestions()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setQuestionPending('')
+    }
+  }
+
+  const handleDeleteQuestion = async (questionId) => {
+    if (!window.confirm('Delete this question?')) return
+    setQuestionPending(`delete-${questionId}`)
+    try {
+      const response = await deleteQuestion(questionId, token)
+      setStatus({ type: 'success', text: response?.message ?? 'Question deleted successfully.' })
+      loadQuestions()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setQuestionPending('')
+    }
   }
 
   const renderProfile = () => {
@@ -919,6 +1083,211 @@ function App() {
     )
   }
 
+  const renderQuestions = () => {
+    const list = questionsData?.questions ?? []
+    const requiresUnits =
+      questionForm.questionType === 'weight' || questionForm.questionType === 'height'
+    const questionReady =
+      questionForm.prompt.trim() && questionForm.answer.trim() && (!requiresUnits ||
+        questionForm.measurementUnits.some((unit) => unit.trim().length > 0))
+    return (
+      <div className="panel questions-panel">
+        <div className="questions-header">
+          <div>
+            <h2>Questions</h2>
+            <p>
+              Showing {questionsData?.count ?? list.length} question
+              {list.length === 1 ? '' : 's'} with current filters.
+            </p>
+          </div>
+          <div className="question-filter">
+            <select
+              value={questionsFilter.questionType}
+              onChange={(event) =>
+                setQuestionsFilter((prev) => ({ ...prev, questionType: event.target.value }))
+              }
+            >
+              {QUESTION_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={questionsFilter.gender}
+              onChange={(event) =>
+                setQuestionsFilter((prev) => ({ ...prev, gender: event.target.value }))
+              }
+            >
+              <option value="">All genders</option>
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+            </select>
+            <button className="refresh-button" onClick={loadQuestions}>
+              {questionsLoading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+        </div>
+        {questionsError && <p className="error-text">{questionsError}</p>}
+        {questionsLoading ? (
+          <p>Loading questions...</p>
+        ) : list.length === 0 ? (
+          <p>No questions found.</p>
+        ) : (
+          <div className="question-list">
+            {list.map((question) => (
+              <article className="question-card" key={question.id}>
+                <header>
+                  <p className="eyebrow muted">{question.question_type ?? 'General'}</p>
+                  <div>
+                    <strong>#{question.id}</strong>
+                    {question.gender && <span className="pill neutral">{question.gender}</span>}
+                  </div>
+                </header>
+                <div className="question-body">
+                  <h3>{question.prompt}</h3>
+                  <p>{question.answer || 'No answer provided yet.'}</p>
+                  {question.measurement_units?.length > 0 && (
+                    <div className="question-units">
+                      <span>Units:</span>
+                      <div className="unit-list">
+                        {question.measurement_units.map((unit) => (
+                          <span key={unit}>{unit}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <small>
+                    Updated{' '}
+                    {question.updated_at ? new Date(question.updated_at).toLocaleDateString() : '—'} ·
+                    Created{' '}
+                    {question.created_at ? new Date(question.created_at).toLocaleDateString() : '—'}
+                  </small>
+                </div>
+                <div className="question-actions">
+                  <button className="secondary" onClick={() => handleEditQuestion(question)}>
+                    Edit
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={() => handleDeleteQuestion(question.id)}
+                    disabled={questionPending === `delete-${question.id}`}
+                  >
+                    {questionPending === `delete-${question.id}` ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+        <div className="question-form">
+          <h3>{questionForm.id ? 'Update question' : 'Create question'}</h3>
+          <div className="question-form-grid">
+            <label>
+              Prompt
+              <input
+                type="text"
+                value={questionForm.prompt}
+                onChange={(event) =>
+                  setQuestionForm((prev) => ({ ...prev, prompt: event.target.value }))
+                }
+                placeholder="Enter the question prompt"
+              />
+            </label>
+            <label>
+              Answer
+              <textarea
+                rows={1}
+                value={questionForm.answer}
+                onChange={(event) =>
+                  setQuestionForm((prev) => ({ ...prev, answer: event.target.value }))
+                }
+                placeholder="Default answer or guidance"
+              />
+            </label>
+            <label>
+              Question type
+              <select
+                value={questionForm.questionType}
+                onChange={(event) =>
+                  setQuestionForm((prev) => ({ ...prev, questionType: event.target.value }))
+                }
+              >
+                <option value="">Select type</option>
+                {QUESTION_TYPES.filter((type) => type.value !== '').map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Gender
+              <select
+                value={questionForm.gender}
+                onChange={(event) =>
+                  setQuestionForm((prev) => ({ ...prev, gender: event.target.value }))
+                }
+              >
+                <option value="">All</option>
+                <option value="Female">Female</option>
+                <option value="Male">Male</option>
+              </select>
+            </label>
+            <div className="measurement-unit-group">
+              <div className="measurement-unit-header">
+                <span>Measurement units</span>
+                <button type="button" className="link-button" onClick={addMeasurementUnitField}>
+                  Add unit
+                </button>
+              </div>
+              {questionForm.measurementUnits.map((unit, index) => (
+                <div key={index} className="measurement-unit-row">
+                  <input
+                    type="text"
+                    value={unit}
+                    placeholder="e.g., kg"
+                    onChange={(event) => setMeasurementUnitValue(index, event.target.value)}
+                  />
+                  {questionForm.measurementUnits.length > 1 && (
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => removeMeasurementUnitField(index)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              {requiresUnits && <small>Provide at least one unit for weight/height questions.</small>}
+            </div>
+          </div>
+          <div className="question-form-actions">
+            <button className="secondary" onClick={resetQuestionForm} type="button">
+              Clear
+            </button>
+            {questionForm.id ? (
+              <button
+                onClick={handleUpdateQuestion}
+                disabled={!questionReady || questionPending === 'update'}
+              >
+                {questionPending === 'update' ? 'Saving…' : 'Save changes'}
+              </button>
+            ) : (
+              <button
+                onClick={handleCreateQuestion}
+                disabled={!questionReady || questionPending === 'create'}
+              >
+                {questionPending === 'create' ? 'Publishing…' : 'Publish question'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell">
       {!isLoggedIn ? (
@@ -1071,12 +1440,7 @@ function App() {
               {activeView === 'dashboard' && renderProfile()}
               {activeView === 'users' && renderUsers()}
               {activeView === 'videos' && renderVideos()}
-              {activeView === 'questions' && (
-                <div className="panel placeholder-panel">
-                  <h3>Questions</h3>
-                  <p>Member questions will be surfaced here.</p>
-                </div>
-              )}
+              {activeView === 'questions' && renderQuestions()}
               {activeView === 'subscription' && (
                 <div className="panel placeholder-panel">
                   <h3>Subscription</h3>
