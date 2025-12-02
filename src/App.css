@@ -1000,6 +1000,48 @@ button.secondary {
   color: var(--color-muted);
 }
 
+.question-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.question-pill-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.question-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.question-option .option-value {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.question-description {
+  margin: 6px 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
 .question-actions {
   display: flex;
   justify-content: flex-end;
@@ -1037,6 +1079,26 @@ button.secondary {
 .question-icon-button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  align-items: center;
 }
 
 .question-form {

@@ -1,7 +1,7 @@
 import Swal from 'sweetalert2'
 import editIcon from '../assets/edit.png'
 import deleteIcon from '../assets/delete.png'
-import { QUESTION_TYPES } from '../constants'
+import { ANSWER_TYPES, GENDER_ALL_LABEL, GENDER_API_BOTH } from '../constants'
 
 function QuestionsView({
   questionsData,
@@ -18,7 +18,7 @@ function QuestionsView({
   const handleDelete = (question) => {
     Swal.fire({
       title: 'Delete question?',
-      text: `This will remove "${question.prompt ?? 'this question'}".`,
+      text: `This will remove "${question.question ?? 'this question'}".`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Yes, delete it',
@@ -45,12 +45,13 @@ function QuestionsView({
         </div>
         <div className="question-filter">
           <select
-            value={questionsFilter.questionType}
+            value={questionsFilter.answerType}
             onChange={(event) =>
-              setQuestionsFilter((prev) => ({ ...prev, questionType: event.target.value }))
+              setQuestionsFilter((prev) => ({ ...prev, answerType: event.target.value }))
             }
           >
-            {QUESTION_TYPES.map((type) => (
+            <option value="">All answer types</option>
+            {ANSWER_TYPES.map((type) => (
               <option key={type.value} value={type.value}>
                 {type.label}
               </option>
@@ -66,6 +67,16 @@ function QuestionsView({
             <option value="Female">Female</option>
             <option value="Male">Male</option>
           </select>
+          <select
+            value={questionsFilter.status}
+            onChange={(event) =>
+              setQuestionsFilter((prev) => ({ ...prev, status: event.target.value }))
+            }
+          >
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
           <button className="refresh-button" onClick={onRefresh}>
             {questionsLoading ? 'Refreshing...' : 'Refresh'}
           </button>
@@ -80,29 +91,40 @@ function QuestionsView({
         <div className="question-list">
           {list.map((question) => (
             <article className="question-card" key={question.id}>
-              <header>
-                <p className="eyebrow muted">{question.question_type ?? 'General'}</p>
-                <div>
-                  <strong>#{question.id}</strong>
-                  <span className="pill neutral">{question.gender || 'All'}</span>
+              <header className="question-card-header">
+                <p className="eyebrow muted">{question.answer_type ?? '—'}</p>
+                <div className="question-pill-group">
+                  <span className={`pill ${question.is_active ? 'success' : 'danger'}`}>
+                    {question.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                  {question.is_required && <span className="pill neutral">Required</span>}
+                  <span className="pill neutral">
+                    {question.gender?.toLowerCase() === GENDER_API_BOTH.toLowerCase()
+                      ? GENDER_ALL_LABEL
+                      : question.gender || GENDER_ALL_LABEL}
+                  </span>
                 </div>
               </header>
               <div className="question-body">
-                <h3>{question.prompt}</h3>
-                <p>{question.answer || 'No answer provided yet.'}</p>
-                {question.measurement_units?.length > 0 && (
-                  <div className="question-units">
-                    <span>Units:</span>
-                    <div className="unit-list">
-                      {question.measurement_units.map((unit) => (
-                        <span key={unit}>{unit}</span>
-                      ))}
-                    </div>
+                <h3>{question.question}</h3>
+                {question.description && <p className="question-description">{question.description}</p>}
+                {question.options?.length > 0 && (
+                  <div className="question-options">
+                    {question.options.map((option, index) => (
+                      <div
+                        key={option.id ?? `${option.option_text}-${option.value ?? index}`}
+                        className="question-option"
+                      >
+                        <strong>{option.option_text}</strong>
+                        {option.value && <span className="option-value">{option.value}</span>}
+                        {!option.is_active && <small>Inactive</small>}
+                      </div>
+                    ))}
                   </div>
                 )}
                 <small>
-                  Updated {question.updated_at ? new Date(question.updated_at).toLocaleDateString() : '—'} ·
-                  Created {question.created_at ? new Date(question.created_at).toLocaleDateString() : '—'}
+                  Updated {question.updated_at ? new Date(question.updated_at).toLocaleDateString() : '—'} · Created{' '}
+                  {question.created_at ? new Date(question.created_at).toLocaleDateString() : '—'}
                 </small>
               </div>
               <div className="question-actions">

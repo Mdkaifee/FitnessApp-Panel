@@ -22,6 +22,8 @@ import {
   VIDEO_CATEGORIES,
   VIDEO_GENDERS,
   WORKSPACE_VIEWS,
+  GENDER_ALL_LABEL,
+  GENDER_API_BOTH,
 } from './constants'
 import {
   getInitialActiveView,
@@ -78,17 +80,20 @@ function App() {
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [questionsError, setQuestionsError] = useState(null)
   const [questionsFilter, setQuestionsFilter] = useState({
-    questionType: '',
+    answerType: '',
     gender: '',
+    status: '',
   })
   const [questionPending, setQuestionPending] = useState('')
   const [questionForm, setQuestionForm] = useState({
     id: '',
-    prompt: '',
-    answer: '',
-    gender: 'All',
-    questionType: '',
-    measurementUnits: [''],
+    question: '',
+    description: '',
+    answerType: 'text',
+    gender: GENDER_ALL_LABEL,
+    isRequired: true,
+    isActive: true,
+    options: [{ id: '', optionText: '', value: '', isActive: true }],
   })
   const [isQuestionModalOpen, setQuestionModalOpen] = useState(false)
 
@@ -493,56 +498,82 @@ function App() {
     }
   }
 
-  const setMeasurementUnitValue = (index, value) => {
-    setQuestionForm((prev) => {
-      const nextUnits = [...prev.measurementUnits]
-      nextUnits[index] = value
-      return { ...prev, measurementUnits: nextUnits }
-    })
-  }
+  const createEmptyOption = () => ({ id: '', optionText: '', value: '', isActive: true })
+  const usesOptions = (type) => type === 'single_choice' || type === 'multi_choice'
 
-  const addMeasurementUnitField = () =>
+  const addOptionField = () =>
     setQuestionForm((prev) => ({
       ...prev,
-      measurementUnits: [...prev.measurementUnits, ''],
+      options: [...prev.options, createEmptyOption()],
     }))
 
-  const removeMeasurementUnitField = (index) =>
+  const updateOptionField = (index, field, value) =>
     setQuestionForm((prev) => {
-      const nextUnits = prev.measurementUnits.filter((_, idx) => idx !== index)
-      return { ...prev, measurementUnits: nextUnits.length ? nextUnits : [''] }
+      const nextOptions = [...prev.options]
+      nextOptions[index] = { ...nextOptions[index], [field]: value }
+      return { ...prev, options: nextOptions }
+    })
+
+  const toggleOptionActive = (index) =>
+    setQuestionForm((prev) => {
+      const nextOptions = [...prev.options]
+      nextOptions[index] = { ...nextOptions[index], isActive: !nextOptions[index].isActive }
+      return { ...prev, options: nextOptions }
+    })
+
+  const removeOptionField = (index) =>
+    setQuestionForm((prev) => {
+      const remaining = prev.options.filter((_, idx) => idx !== index)
+      return { ...prev, options: remaining.length ? remaining : [createEmptyOption()] }
     })
 
   const resetQuestionForm = () =>
     setQuestionForm({
       id: '',
-      prompt: '',
-      answer: '',
-      gender: 'All',
-      questionType: '',
-      measurementUnits: [''],
+      question: '',
+      description: '',
+      answerType: 'text',
+      gender: GENDER_ALL_LABEL,
+      isRequired: true,
+      isActive: true,
+      options: [createEmptyOption()],
     })
 
   const prepareQuestionPayload = () => {
-    const resolvedGender = questionForm.gender && questionForm.gender.trim()
-    const payload = {
-      prompt: questionForm.prompt.trim(),
-      answer: questionForm.answer.trim(),
-      gender: resolvedGender || 'All',
-      question_type: questionForm.questionType || null,
+    const trimmedQuestion = questionForm.question.trim()
+    if (!trimmedQuestion) {
+      throw new Error('Enter a question prompt.')
     }
-    const requiresUnits =
-      questionForm.questionType === 'weight' || questionForm.questionType === 'height'
-    const units = questionForm.measurementUnits
-      .map((unit) => unit.trim())
-      .filter((unit) => unit.length > 0)
-    if (requiresUnits) {
-      if (units.length === 0) {
-        throw new Error('Provide at least one measurement unit for weight/height questions.')
+    if (!questionForm.answerType) {
+      throw new Error('Select an answer type.')
+    }
+    const payload = {
+      question: trimmedQuestion,
+      description: questionForm.description.trim() || null,
+      answer_type: questionForm.answerType,
+      gender:
+        questionForm.gender?.toLowerCase() === GENDER_ALL_LABEL.toLowerCase()
+          ? GENDER_API_BOTH
+          : questionForm.gender,
+      is_required: Boolean(questionForm.isRequired),
+      is_active: Boolean(questionForm.isActive),
+    }
+    const formattedOptions = questionForm.options
+      .map((option) => ({
+        ...(option.id ? { id: option.id } : {}),
+        option_text: option.optionText.trim(),
+        value: option.value.trim() || null,
+        is_active: option.isActive,
+      }))
+      .filter((option) => option.option_text.length > 0)
+
+    if (usesOptions(questionForm.answerType)) {
+      if (!formattedOptions.length) {
+        throw new Error('Add at least one option for this answer type.')
       }
-      payload.measurement_units = units
-    } else if (units.length > 0) {
-      payload.measurement_units = units
+      payload.options = formattedOptions
+    } else if (formattedOptions.length > 0) {
+      payload.options = formattedOptions
     }
     return payload
   }
@@ -566,13 +597,21 @@ function App() {
   const handleEditQuestion = (question) => {
     setQuestionForm({
       id: question.id,
-      prompt: question.prompt ?? '',
-      answer: question.answer ?? '',
-      gender: question.gender ?? 'All',
-      questionType: question.question_type ?? '',
-      measurementUnits: question.measurement_units && question.measurement_units.length
-        ? question.measurement_units
-        : [''],
+      question: question.question ?? '',
+      description: question.description ?? '',
+      answerType: question.answer_type ?? 'text',
+      gender: (question.gender?.toLowerCase() === GENDER_API_BOTH.toLowerCase() ? GENDER_ALL_LABEL : question.gender) ?? GENDER_ALL_LABEL,
+      isRequired: question.is_required ?? true,
+      isActive: question.is_active ?? true,
+      options:
+        question.options && question.options.length
+          ? question.options.map((option) => ({
+              id: option.id ?? '',
+              optionText: option.option_text ?? '',
+              value: option.value ?? '',
+              isActive: option.is_active ?? true,
+            }))
+          : [createEmptyOption()],
     })
     setQuestionModalOpen(true)
   }
@@ -616,7 +655,6 @@ function App() {
   }
 
   const handleDeleteQuestion = async (questionId) => {
-    if (!window.confirm('Delete this question?')) return
     setQuestionPending(`delete-${questionId}`)
     try {
       const response = await deleteQuestion(questionId, token)
@@ -732,12 +770,15 @@ function App() {
         open={isQuestionModalOpen}
         form={questionForm}
         setForm={setQuestionForm}
-        pendingAction={questionPending === 'create' || questionPending === 'update' ? questionPending : ''}
+        pendingAction={
+          questionPending === 'create' || questionPending === 'update' ? questionPending : ''
+        }
         onClose={closeQuestionModal}
         onSubmit={handleQuestionModalSubmit}
-        addMeasurementUnitField={addMeasurementUnitField}
-        removeMeasurementUnitField={removeMeasurementUnitField}
-        setMeasurementUnitValue={setMeasurementUnitValue}
+        addOptionField={addOptionField}
+        removeOptionField={removeOptionField}
+        updateOptionField={updateOptionField}
+        toggleOptionActive={toggleOptionActive}
       />
     </div>
   )

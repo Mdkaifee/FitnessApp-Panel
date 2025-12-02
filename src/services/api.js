@@ -88,10 +88,21 @@ export const deleteVideo = (videoId, token) =>
     token,
   })
 
-export const fetchQuestions = ({ questionType, gender }, token) => {
+import { GENDER_ALL_LABEL, GENDER_API_BOTH } from '../constants'
+
+export const fetchQuestions = ({ answerType, gender, status }, token) => {
   const params = new URLSearchParams()
-  if (questionType) params.append('question_type', questionType)
-  if (gender) params.append('gender', gender)
+  if (answerType) params.append('answer_type', answerType)
+  if (gender) {
+    if (gender === GENDER_ALL_LABEL) {
+      params.append('gender', GENDER_API_BOTH)
+    } else {
+      params.append('gender', gender)
+    }
+  }
+  if (status) {
+    params.append('is_active', status === 'active' ? 'true' : 'false')
+  }
   const query = params.toString() ? `?${params.toString()}` : ''
   return apiRequest(`/questions${query}`, { token })
 }
