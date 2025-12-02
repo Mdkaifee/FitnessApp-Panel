@@ -16,79 +16,40 @@ import {
   deleteQuestion,
 } from './services/api'
 import './App.css'
-
-const TOKEN_KEY = 'fitness_admin_access_token'
-const ACTIVE_VIEW_KEY = 'fitness_admin_active_view'
-const WORKSPACE_VIEWS = new Set(['dashboard', 'users', 'videos', 'questions', 'subscription'])
-
-const safeGetFromStorage = (key) => {
-  if (typeof window === 'undefined') return null
-  try {
-    return window.localStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-
-const safeSetInStorage = (key, value) => {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(key, value)
-  } catch {
-    // Ignore storage write failures (e.g., private browsing)
-  }
-}
-
-const safeRemoveFromStorage = (key) => {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.removeItem(key)
-  } catch {
-    // Ignore storage removal failures
-  }
-}
-
-const getInitialToken = () => safeGetFromStorage(TOKEN_KEY) ?? ''
-const getInitialActiveView = () => {
-  const storedToken = safeGetFromStorage(TOKEN_KEY)
-  if (!storedToken) return 'login'
-  const storedView = safeGetFromStorage(ACTIVE_VIEW_KEY)
-  return storedView && WORKSPACE_VIEWS.has(storedView) ? storedView : 'dashboard'
-}
-const VIDEO_CATEGORIES = [
-  { label: 'NewCore', value: 'NewCore' },
-  { label: 'NewArms', value: 'NewArms' },
-  { label: 'NewLegs', value: 'NewLegs' },
-  { label: 'NewFullBody', value: 'NewFullBody' },
-]
-
-const VIDEO_GENDERS = [
-  { label: 'All genders', value: 'Both' },
-  { label: 'Female', value: 'Female' },
-  { label: 'Male', value: 'Male' },
-]
-
-const QUESTION_TYPES = [
-  { label: 'All Types', value: '' },
-  { label: 'Weight', value: 'weight' },
-  { label: 'Height', value: 'height' },
-  { label: 'Habits', value: 'habits' },
-  { label: 'Nutrition', value: 'nutrition' },
-  { label: 'Other', value: 'other' },
-]
+import {
+  ACTIVE_VIEW_KEY,
+  TOKEN_KEY,
+  VIDEO_CATEGORIES,
+  VIDEO_GENDERS,
+  WORKSPACE_VIEWS,
+} from './constants'
+import {
+  getInitialActiveView,
+  getInitialToken,
+  safeGetFromStorage,
+  safeRemoveFromStorage,
+  safeSetInStorage,
+} from './utils/storage'
+import AuthView from './views/AuthView'
+import DashboardView from './views/DashboardView'
+import UsersView from './views/UsersView'
+import VideosView from './views/VideosView'
+import QuestionsView from './views/QuestionsView'
+import SubscriptionView from './views/SubscriptionView'
+import Sidebar from './components/layout/Sidebar'
+import StatusBanner from './components/shared/StatusBanner'
 
 function App() {
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [flowHint, setFlowHint] = useState(null)
-  const [token, setToken] = useState(getInitialToken)
+  const [token, setToken] = useState(() => getInitialToken())
   const [profile, setProfile] = useState(null)
   const [profileComplete, setProfileComplete] = useState(false)
   const [profileLoading, setProfileLoading] = useState(false)
   const [usersData, setUsersData] = useState(null)
   const [usersLoading, setUsersLoading] = useState(false)
-  const [activeView, setActiveView] = useState(getInitialActiveView)
-  const [sessionHydrated, setSessionHydrated] = useState(() => typeof window !== 'undefined')
+  const [activeView, setActiveView] = useState(() => getInitialActiveView())
   const [status, setStatus] = useState(null)
   const [pendingAction, setPendingAction] = useState('')
   const [resendSeconds, setResendSeconds] = useState(0)
@@ -118,7 +79,7 @@ function App() {
     id: '',
     prompt: '',
     answer: '',
-    gender: '',
+    gender: 'All',
     questionType: '',
     measurementUnits: [''],
   })
@@ -257,37 +218,33 @@ function App() {
   }, [handleApiError, questionsFilter, token])
 
   useEffect(() => {
-    if (sessionHydrated) return
-    const storedToken = safeGetFromStorage(TOKEN_KEY)
-    if (storedToken) {
-      setToken(storedToken)
-      const storedView = safeGetFromStorage(ACTIVE_VIEW_KEY)
-      if (storedView && WORKSPACE_VIEWS.has(storedView)) {
-        setActiveView(storedView)
-      } else {
-        setActiveView('dashboard')
-      }
-    }
-    setSessionHydrated(true)
-  }, [sessionHydrated])
-
-  useEffect(() => {
-    if (!sessionHydrated) return
     if (token) {
       safeSetInStorage(TOKEN_KEY, token)
     } else {
       safeRemoveFromStorage(TOKEN_KEY)
     }
-  }, [token, sessionHydrated])
+  }, [token])
 
   useEffect(() => {
-    if (!sessionHydrated) return
     if (!token || activeView === 'login') {
       safeRemoveFromStorage(ACTIVE_VIEW_KEY)
       return
     }
     safeSetInStorage(ACTIVE_VIEW_KEY, activeView)
-  }, [activeView, token, sessionHydrated])
+  }, [activeView, token])
+
+  useEffect(() => {
+    if (token) return
+    const storedToken = safeGetFromStorage(TOKEN_KEY)
+    if (!storedToken) return
+    setToken(storedToken)
+    const storedView = safeGetFromStorage(ACTIVE_VIEW_KEY)
+    if (storedView && WORKSPACE_VIEWS.has(storedView)) {
+      setActiveView(storedView)
+    } else {
+      setActiveView('dashboard')
+    }
+  }, [token])
 
   useEffect(() => {
     if (status?.type !== 'error' && status?.text) {
@@ -382,7 +339,9 @@ function App() {
         throw new Error('No access token returned.')
       }
       setToken(accessToken)
+      safeSetInStorage(TOKEN_KEY, accessToken)
       setActiveView('dashboard')
+      safeSetInStorage(ACTIVE_VIEW_KEY, 'dashboard')
       setStatus({ type: 'success', text: response?.message ?? 'OTP verified successfully.' })
       setProfileComplete(Boolean(response?.data?.profile_complete))
       setOtp('')
@@ -575,18 +534,19 @@ function App() {
       id: '',
       prompt: '',
       answer: '',
-      gender: '',
+      gender: 'All',
       questionType: '',
       measurementUnits: [''],
     })
 
   const prepareQuestionPayload = () => {
+    const resolvedGender = questionForm.gender && questionForm.gender.trim()
     const payload = {
       prompt: questionForm.prompt.trim(),
       answer: questionForm.answer.trim(),
+      gender: resolvedGender || 'All',
+      question_type: questionForm.questionType || null,
     }
-    if (questionForm.gender) payload.gender = questionForm.gender
-    if (questionForm.questionType) payload.question_type = questionForm.questionType
     const requiresUnits =
       questionForm.questionType === 'weight' || questionForm.questionType === 'height'
     const units = questionForm.measurementUnits
@@ -623,7 +583,7 @@ function App() {
       id: question.id,
       prompt: question.prompt ?? '',
       answer: question.answer ?? '',
-      gender: question.gender ?? '',
+      gender: question.gender ?? 'All',
       questionType: question.question_type ?? '',
       measurementUnits: question.measurement_units && question.measurement_units.length
         ? question.measurement_units
@@ -664,828 +624,34 @@ function App() {
     }
   }
 
-  const renderProfile = () => {
-    if (profileLoading) {
-      return (
-        <div className="panel">
-          <p>Loading profile...</p>
-        </div>
-      )
-    }
-
-    if (!profile) {
-      return (
-        <div className="panel">
-          <p>No profile details available yet.</p>
-        </div>
-      )
-    }
-
-    const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || '—'
-    const initials =
-      [profile.first_name, profile.last_name]
-        .filter(Boolean)
-        .map((name) => name[0]?.toUpperCase())
-        .join('') ||
-      profile.email?.[0]?.toUpperCase() ||
-      'U'
-    const infoRows = [
-      { label: 'Name', value: fullName },
-      { label: 'Email', value: profile.email },
-      { label: 'Phone', value: profile.phone ?? '—' },
-      { label: 'DOB', value: profile.dob ?? '—' },
-      { label: 'Gender', value: profile.gender ?? '—' },
-      { label: 'Status', value: profile.is_active ? 'Active' : 'Inactive' },
-    ]
-
-    return (
-      <div className="panel profile-panel">
-        <div className="profile-panel__top">
-          <div>
-            <p className="eyebrow muted">Dashboard</p>
-            <h2>Account overview</h2>
-            <p>Account overview and profile information.</p>
-          </div>
-          <button className="refresh-button" onClick={loadProfile}>
-            Refresh
-          </button>
-        </div>
-        <div className="profile-panel__body">
-          <div className="profile-identity">
-            <div className="profile-avatar">
-              {profile.photo ? (
-                <img src={profile.photo} alt={fullName} />
-              ) : (
-                <span>{initials}</span>
-              )}
-            </div>
-            <div>
-              <h3>{fullName}</h3>
-              <p>{profile.email}</p>
-            </div>
-          </div>
-          <div className="profile-info-grid">
-            {infoRows.map((row) => (
-              <div key={row.label} className="profile-info-card">
-                <span className="label">{row.label}</span>
-                <span>{row.value ?? '—'}</span>
-              </div>
-            ))}
-            <div className="profile-info-card">
-              <span className="label">Photo</span>
-              {profile.photo ? (
-                <a href={profile.photo} target="_blank" rel="noreferrer" className="link-button">
-                  View photo
-                </a>
-              ) : (
-                <span>Not uploaded</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const renderUsers = () => {
-    if (usersLoading) {
-      return (
-        <div className="panel">
-          <p>Loading users...</p>
-        </div>
-      )
-    }
-
-    if (!usersData) {
-      return (
-        <div className="panel">
-          <p>Loading user list...</p>
-        </div>
-      )
-    }
-
-    const list = usersData.users ?? []
-
-    return (
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>All Users</h2>
-            <p>Showing {usersData.count ?? list.length} total accounts.</p>
-          </div>
-          <button className="link-button" onClick={loadUsers}>
-            Refresh
-          </button>
-        </div>
-        {list.length === 0 ? (
-          <p>No users available.</p>
-        ) : (
-          <div className="users-list">
-            {list.map((user, index) => {
-              const fullName =
-                [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email || '—'
-              return (
-                <article className="user-card" key={user.id}>
-                  <header className="user-card__header">
-                    <div>
-                      <span className="user-card__id">#{index + 1}</span>
-                      <p className="user-card__name">{fullName}</p>
-                    </div>
-                    <span className={`pill ${user.is_active ? 'success' : 'danger'}`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </header>
-                  <div className="user-card__grid">
-                    <div className="user-field">
-                      <span className="label">Email</span>
-                      <span>{user.email ?? '—'}</span>
-                    </div>
-                    <div className="user-field">
-                      <span className="label">Phone</span>
-                      <span>{user.phone ?? '—'}</span>
-                    </div>
-                    <div className="user-field">
-                      <span className="label">DOB</span>
-                      <span>{user.dob ?? '—'}</span>
-                    </div>
-                    <div className="user-field">
-                      <span className="label">Gender</span>
-                      <span>{user.gender ?? '—'}</span>
-                    </div>
-                    <div className="user-field">
-                      <span className="label">Photo</span>
-                      {user.photo ? (
-                        <a className="link-button" href={user.photo} target="_blank" rel="noreferrer">
-                          View photo
-                        </a>
-                      ) : (
-                        <span>—</span>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  const renderVideos = () => {
-    const list = videosData?.videos ?? []
-    const uploadReady = Boolean(
-      uploadForm.videoFile && uploadForm.thumbnailFile && uploadForm.title.trim(),
-    )
-    const updateReady =
-      updateForm.videoId &&
-      (updateForm.bodyPart ||
-        updateForm.gender ||
-        updateForm.title ||
-        updateForm.description ||
-        updateForm.videoFile ||
-        updateForm.thumbnailFile)
-
-    return (
-      <div className="panel videos-panel">
-        <div className="videos-header">
-          <div>
-            <h2>Video Library</h2>
-            <p>
-              Category: <strong>{videoCategory}</strong> ·{' '}
-              {videosData?.count ?? list.length} total records from database.
-            </p>
-          </div>
-          <div className="video-filter">
-            <select
-              value={videoCategory}
-              onChange={(event) => handleVideoCategoryChange(event.target.value)}
-            >
-              {VIDEO_CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-            <button className="refresh-button" onClick={() => loadVideos(videoCategory)}>
-              {videosLoading ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-        </div>
-        {videosError && <p className="error-text">{videosError}</p>}
-        {videosLoading ? (
-          <p>Loading videos...</p>
-        ) : list.length === 0 ? (
-          <p>No videos available for this category.</p>
-        ) : (
-          <div className="video-card-grid">
-            {list.map((video) => {
-              const createdOn = video.created_at
-                ? new Date(video.created_at).toLocaleDateString()
-                : '—'
-              return (
-                <article className="video-card" key={video.id}>
-                  <div className="video-card__media">
-                    {video.thumbnail_url ? (
-                      <img src={video.thumbnail_url} alt={video.title ?? `Video ${video.id}`} />
-                    ) : (
-                      <div className="video-card__placeholder">No thumbnail</div>
-                    )}
-                    <div className="video-card__meta">
-                      <span>{video.body_part ?? '—'}</span>
-                      <span className="pill neutral">{video.gender ?? '—'}</span>
-                    </div>
-                  </div>
-                  <div className="video-card__content">
-                    <h3>{video.title ?? 'Untitled video'}</h3>
-                    <p>{video.description ?? 'No description provided.'}</p>
-                    <div className="video-card__info">
-                      <span>ID #{video.id}</span>
-                      <span>{createdOn}</span>
-                      {video.video_url && (
-                        <a href={video.video_url} target="_blank" rel="noreferrer" className="link-button">
-                          Watch
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                  <div className="video-card__actions">
-                    <button className="secondary" onClick={() => handleSelectVideoForEdit(video)}>
-                      Edit
-                    </button>
-                    <button
-                      className="danger"
-                      onClick={() => handleDeleteVideo(video.id)}
-                      disabled={videoPending === `delete-${video.id}`}
-                    >
-                      {videoPending === `delete-${video.id}` ? 'Removing...' : 'Delete'}
-                    </button>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        )}
-        <div className="video-forms">
-          <div className="video-form">
-            <h3>Upload new video</h3>
-            <div className="video-form__grid">
-              <label>
-                Body part
-                <select
-                  value={uploadForm.bodyPart}
-                  onChange={(event) =>
-                    setUploadForm((prev) => ({ ...prev, bodyPart: event.target.value }))
-                  }
-                >
-                  {VIDEO_CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Gender
-                <select
-                  value={uploadForm.gender}
-                  onChange={(event) =>
-                    setUploadForm((prev) => ({ ...prev, gender: event.target.value }))
-                  }
-                >
-                  {VIDEO_GENDERS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Title
-                <input
-                  type="text"
-                  placeholder="Enter title"
-                  value={uploadForm.title}
-                  onChange={(event) =>
-                    setUploadForm((prev) => ({ ...prev, title: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="full-width">
-                Description
-                <textarea
-                  rows={3}
-                  placeholder="Optional description"
-                  value={uploadForm.description}
-                  onChange={(event) =>
-                    setUploadForm((prev) => ({ ...prev, description: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Video file
-                <input
-                  type="file"
-                  accept="video/mp4,video/mpeg,video/quicktime"
-                  onChange={(event) =>
-                    setUploadForm((prev) => ({
-                      ...prev,
-                      videoFile: event.target.files?.[0] ?? null,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Thumbnail file
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  onChange={(event) =>
-                    setUploadForm((prev) => ({
-                      ...prev,
-                      thumbnailFile: event.target.files?.[0] ?? null,
-                    }))
-                  }
-                />
-              </label>
-            </div>
-            <button
-              onClick={handleUploadVideoAction}
-              disabled={!uploadReady || videoPending === 'upload'}
-            >
-              {videoPending === 'upload' ? 'Publishing…' : 'Publish video'}
-            </button>
-          </div>
-          <div className="video-form">
-            <h3>Update existing video</h3>
-            <div className="video-form__grid">
-              <label>
-                Select video
-                <select
-                  value={updateForm.videoId}
-                  onChange={(event) => {
-                    const selectedId = event.target.value
-                    if (!selectedId) {
-                      resetUpdateForm()
-                      return
-                    }
-                    const selectedVideo = list.find((video) => String(video.id) === selectedId)
-                    if (selectedVideo) {
-                      handleSelectVideoForEdit(selectedVideo)
-                    } else {
-                      setUpdateForm((prev) => ({ ...prev, videoId: selectedId }))
-                    }
-                  }}
-                >
-                  <option value="">Choose a video</option>
-                  {list.map((video) => (
-                    <option key={video.id} value={video.id}>
-                      #{video.id} · {video.title ?? 'Untitled'}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Title
-                <input
-                  type="text"
-                  placeholder="Leave blank to keep current"
-                  value={updateForm.title}
-                  onChange={(event) =>
-                    setUpdateForm((prev) => ({ ...prev, title: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="full-width">
-                Description
-                <textarea
-                  rows={3}
-                  placeholder="Leave blank to keep current"
-                  value={updateForm.description}
-                  onChange={(event) =>
-                    setUpdateForm((prev) => ({ ...prev, description: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Body part
-                <select
-                  value={updateForm.bodyPart}
-                  onChange={(event) =>
-                    setUpdateForm((prev) => ({ ...prev, bodyPart: event.target.value }))
-                  }
-                >
-                  <option value="">Keep current</option>
-                  {VIDEO_CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Gender
-                <select
-                  value={updateForm.gender}
-                  onChange={(event) =>
-                    setUpdateForm((prev) => ({ ...prev, gender: event.target.value }))
-                  }
-                >
-                  <option value="">Keep current</option>
-                  {VIDEO_GENDERS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Replace video file
-                <input
-                  type="file"
-                  accept="video/mp4,video/mpeg,video/quicktime"
-                  onChange={(event) =>
-                    setUpdateForm((prev) => ({
-                      ...prev,
-                      videoFile: event.target.files?.[0] ?? null,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Replace thumbnail
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  onChange={(event) =>
-                    setUpdateForm((prev) => ({
-                      ...prev,
-                      thumbnailFile: event.target.files?.[0] ?? null,
-                    }))
-                  }
-                />
-              </label>
-            </div>
-            <div className="video-form__actions">
-              <button
-                className="secondary"
-                onClick={resetUpdateForm}
-                type="button"
-                disabled={videoPending === 'update'}
-              >
-                Reset
-              </button>
-              <button
-                onClick={handleUpdateVideoAction}
-                disabled={!updateReady || videoPending === 'update'}
-              >
-                {videoPending === 'update' ? 'Saving…' : 'Save changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const renderQuestions = () => {
-    const list = questionsData?.questions ?? []
-    const requiresUnits =
-      questionForm.questionType === 'weight' || questionForm.questionType === 'height'
-    const questionReady =
-      questionForm.prompt.trim() && questionForm.answer.trim() && (!requiresUnits ||
-        questionForm.measurementUnits.some((unit) => unit.trim().length > 0))
-    return (
-      <div className="panel questions-panel">
-        <div className="questions-header">
-          <div>
-            <h2>Questions</h2>
-            <p>
-              Showing {questionsData?.count ?? list.length} question
-              {list.length === 1 ? '' : 's'} with current filters.
-            </p>
-          </div>
-          <div className="question-filter">
-            <select
-              value={questionsFilter.questionType}
-              onChange={(event) =>
-                setQuestionsFilter((prev) => ({ ...prev, questionType: event.target.value }))
-              }
-            >
-              {QUESTION_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={questionsFilter.gender}
-              onChange={(event) =>
-                setQuestionsFilter((prev) => ({ ...prev, gender: event.target.value }))
-              }
-            >
-              <option value="">All genders</option>
-              <option value="Female">Female</option>
-              <option value="Male">Male</option>
-            </select>
-            <button className="refresh-button" onClick={loadQuestions}>
-              {questionsLoading ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-        </div>
-        {questionsError && <p className="error-text">{questionsError}</p>}
-        {questionsLoading ? (
-          <p>Loading questions...</p>
-        ) : list.length === 0 ? (
-          <p>No questions found.</p>
-        ) : (
-          <div className="question-list">
-            {list.map((question) => (
-              <article className="question-card" key={question.id}>
-                <header>
-                  <p className="eyebrow muted">{question.question_type ?? 'General'}</p>
-                  <div>
-                    <strong>#{question.id}</strong>
-                    {question.gender && <span className="pill neutral">{question.gender}</span>}
-                  </div>
-                </header>
-                <div className="question-body">
-                  <h3>{question.prompt}</h3>
-                  <p>{question.answer || 'No answer provided yet.'}</p>
-                  {question.measurement_units?.length > 0 && (
-                    <div className="question-units">
-                      <span>Units:</span>
-                      <div className="unit-list">
-                        {question.measurement_units.map((unit) => (
-                          <span key={unit}>{unit}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <small>
-                    Updated{' '}
-                    {question.updated_at ? new Date(question.updated_at).toLocaleDateString() : '—'} ·
-                    Created{' '}
-                    {question.created_at ? new Date(question.created_at).toLocaleDateString() : '—'}
-                  </small>
-                </div>
-                <div className="question-actions">
-                  <button className="secondary" onClick={() => handleEditQuestion(question)}>
-                    Edit
-                  </button>
-                  <button
-                    className="danger"
-                    onClick={() => handleDeleteQuestion(question.id)}
-                    disabled={questionPending === `delete-${question.id}`}
-                  >
-                    {questionPending === `delete-${question.id}` ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-        <div className="question-form">
-          <h3>{questionForm.id ? 'Update question' : 'Create question'}</h3>
-          <div className="question-form-grid">
-            <label>
-              Prompt
-              <input
-                type="text"
-                value={questionForm.prompt}
-                onChange={(event) =>
-                  setQuestionForm((prev) => ({ ...prev, prompt: event.target.value }))
-                }
-                placeholder="Enter the question prompt"
-              />
-            </label>
-            <label>
-              Answer
-              <textarea
-                rows={1}
-                value={questionForm.answer}
-                onChange={(event) =>
-                  setQuestionForm((prev) => ({ ...prev, answer: event.target.value }))
-                }
-                placeholder="Default answer or guidance"
-              />
-            </label>
-            <label>
-              Question type
-              <select
-                value={questionForm.questionType}
-                onChange={(event) =>
-                  setQuestionForm((prev) => ({ ...prev, questionType: event.target.value }))
-                }
-              >
-                <option value="">Select type</option>
-                {QUESTION_TYPES.filter((type) => type.value !== '').map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Gender
-              <select
-                value={questionForm.gender}
-                onChange={(event) =>
-                  setQuestionForm((prev) => ({ ...prev, gender: event.target.value }))
-                }
-              >
-                <option value="">All</option>
-                <option value="Female">Female</option>
-                <option value="Male">Male</option>
-              </select>
-            </label>
-            <div className="measurement-unit-group">
-              <div className="measurement-unit-header">
-                <span>Measurement units</span>
-                <button type="button" className="link-button" onClick={addMeasurementUnitField}>
-                  Add unit
-                </button>
-              </div>
-              {questionForm.measurementUnits.map((unit, index) => (
-                <div key={index} className="measurement-unit-row">
-                  <input
-                    type="text"
-                    value={unit}
-                    placeholder="e.g., kg"
-                    onChange={(event) => setMeasurementUnitValue(index, event.target.value)}
-                  />
-                  {questionForm.measurementUnits.length > 1 && (
-                    <button
-                      type="button"
-                      className="ghost-button"
-                      onClick={() => removeMeasurementUnitField(index)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              {requiresUnits && <small>Provide at least one unit for weight/height questions.</small>}
-            </div>
-          </div>
-          <div className="question-form-actions">
-            <button className="secondary" onClick={resetQuestionForm} type="button">
-              Clear
-            </button>
-            {questionForm.id ? (
-              <button
-                onClick={handleUpdateQuestion}
-                disabled={!questionReady || questionPending === 'update'}
-              >
-                {questionPending === 'update' ? 'Saving…' : 'Save changes'}
-              </button>
-            ) : (
-              <button
-                onClick={handleCreateQuestion}
-                disabled={!questionReady || questionPending === 'create'}
-              >
-                {questionPending === 'create' ? 'Publishing…' : 'Publish question'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const signedEmail = profile?.email ?? trimmedEmail
 
   return (
     <div className="app-shell">
       {!isLoggedIn ? (
-        <section className="auth-board">
-          <div className="auth-board__left">
-            <div className="auth-brand">
-              <div className="brand-icon">FC</div>
-              <p>Fitness Cassie Admin</p>
-            </div>
-            <div className="auth-copy">
-              <h1>Secure OTP access</h1>
-              <p>Trigger OTP logins, verify sessions, and monitor profile completion in one place.</p>
-            </div>
-          </div>
-          <div className="auth-board__form">
-            <label className="field">
-              <span>Email</span>
-              <input
-                type="email"
-                placeholder="user@example.com"
-                value={email}
-                autoComplete="email"
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
-            <div className="button-row">
-              <button
-                onClick={handleRequestOtp}
-                disabled={!trimmedEmail || pendingAction === 'request'}
-              >
-                {pendingAction === 'request' ? 'Sending...' : 'Send OTP'}
-              </button>
-              <button
-                className="secondary"
-                onClick={handleResendOtp}
-                disabled={
-                  !hasRequestedOtp ||
-                  resendSeconds > 0 ||
-                  pendingAction === 'resend' ||
-                  !trimmedEmail
-                }
-              >
-                {resendSeconds > 0
-                  ? `Resend OTP in ${String(Math.floor(resendSeconds / 60)).padStart(2, '0')}:${String(resendSeconds % 60).padStart(2, '0')}`
-                  : 'Resend OTP'}
-              </button>
-            </div>
-            <label className="field">
-              <span>One-Time Password</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="6-digit code"
-                value={otp}
-                onChange={(event) => handleOtpChange(event.target.value)}
-                maxLength={6}
-              />
-            </label>
-            <button
-              className="primary"
-              onClick={handleVerifyOtp}
-              disabled={!trimmedEmail || otp.length < 6 || pendingAction === 'verify'}
-            >
-              {pendingAction === 'verify' ? 'Verifying...' : 'Verify & Login'}
-            </button>
-            {flowHint && (
-              <p className="hint">
-                Flow detected: <span className="pill neutral">{flowHint}</span>
-              </p>
-            )}
-          </div>
-        </section>
+        <AuthView
+          email={email}
+          otp={otp}
+          flowHint={flowHint}
+          trimmedEmail={trimmedEmail}
+          pendingAction={pendingAction}
+          hasRequestedOtp={hasRequestedOtp}
+          resendSeconds={resendSeconds}
+          onEmailChange={setEmail}
+          onRequestOtp={handleRequestOtp}
+          onResendOtp={handleResendOtp}
+          onVerifyOtp={handleVerifyOtp}
+          onOtpChange={handleOtpChange}
+        />
       ) : (
         <section className="workspace">
-          <aside className="sidebar">
-            <div className="sidebar-brand">
-              <div className="brand-icon">FC</div>
-              <div>
-                <p className="brand-title">Fitness Cassie</p>
-                <span>Admin Suite</span>
-              </div>
-            </div>
-            <nav className="sidebar-nav">
-              <button
-                className={activeView === 'dashboard' ? 'active' : ''}
-                onClick={() => setActiveView('dashboard')}
-              >
-                <span className="nav-icon">🏠</span>
-                <span>Dashboard</span>
-              </button>
-              <button
-                className={activeView === 'users' ? 'active' : ''}
-                onClick={() => setActiveView('users')}
-              >
-                <span className="nav-icon">👥</span>
-                <span>Users</span>
-              </button>
-              <button
-                className={activeView === 'videos' ? 'active' : ''}
-                onClick={() => setActiveView('videos')}
-              >
-                <span className="nav-icon">🎬</span>
-                <span>Videos</span>
-              </button>
-              <button
-                className={activeView === 'questions' ? 'active' : ''}
-                onClick={() => setActiveView('questions')}
-              >
-                <span className="nav-icon">❓</span>
-                <span>Questions</span>
-              </button>
-              <button
-                className={activeView === 'subscription' ? 'active' : ''}
-                onClick={() => setActiveView('subscription')}
-              >
-                <span className="nav-icon">💳</span>
-                <span>Subscription</span>
-              </button>
-            </nav>
-            <div className="sidebar-section">
-              <p className="sidebar-label">Signed in as</p>
-              <p className="sidebar-email">{profile?.email ?? trimmedEmail}</p>
-            </div>
-            <div className="sidebar-footer">
-              <button
-                className="secondary"
-                onClick={handleLogout}
-                disabled={pendingAction === 'logout'}
-              >
-                {pendingAction === 'logout' ? 'Logging out...' : 'Logout'}
-              </button>
-            </div>
-          </aside>
+          <Sidebar
+            activeView={activeView}
+            onViewChange={setActiveView}
+            signedEmail={signedEmail}
+            pendingAction={pendingAction}
+            onLogout={handleLogout}
+          />
           <div className="content">
             <header className="content-header">
               <div>
@@ -1496,32 +662,63 @@ function App() {
                 <span className={`profile-pill ${profileComplete ? 'complete' : 'incomplete'}`}>
                   {profileComplete ? 'Profile complete' : 'Profile incomplete'}
                 </span>
-                {flowHint && (
-                  <span className="pill neutral">Flow: {flowHint}</span>
-                )}
+                {flowHint && <span className="pill neutral">Flow: {flowHint}</span>}
               </div>
             </header>
             <main className="main-content">
-              {activeView === 'dashboard' && renderProfile()}
-              {activeView === 'users' && renderUsers()}
-              {activeView === 'videos' && renderVideos()}
-              {activeView === 'questions' && renderQuestions()}
-              {activeView === 'subscription' && (
-                <div className="panel placeholder-panel">
-                  <h3>Subscription</h3>
-                  <p>Subscription metrics will show up in this section.</p>
-                </div>
+              {activeView === 'dashboard' && (
+                <DashboardView profile={profile} isLoading={profileLoading} onRefresh={loadProfile} />
               )}
+              {activeView === 'users' && (
+                <UsersView usersData={usersData} isLoading={usersLoading} onRefresh={loadUsers} />
+              )}
+              {activeView === 'videos' && (
+                <VideosView
+                  videosData={videosData}
+                  videosLoading={videosLoading}
+                  videosError={videosError}
+                  videoCategory={videoCategory}
+                  uploadForm={uploadForm}
+                  updateForm={updateForm}
+                  videoPending={videoPending}
+                  onCategoryChange={handleVideoCategoryChange}
+                  onRefresh={() => loadVideos(videoCategory)}
+                  setUploadForm={setUploadForm}
+                  setUpdateForm={setUpdateForm}
+                  onUploadSubmit={handleUploadVideoAction}
+                  onSelectVideoForEdit={handleSelectVideoForEdit}
+                  onDeleteVideo={handleDeleteVideo}
+                  onUpdateSubmit={handleUpdateVideoAction}
+                  onResetUpdateForm={resetUpdateForm}
+                />
+              )}
+              {activeView === 'questions' && (
+                <QuestionsView
+                  questionsData={questionsData}
+                  questionsLoading={questionsLoading}
+                  questionsError={questionsError}
+                  questionsFilter={questionsFilter}
+                  setQuestionsFilter={setQuestionsFilter}
+                  questionForm={questionForm}
+                  setQuestionForm={setQuestionForm}
+                  questionPending={questionPending}
+                  onRefresh={loadQuestions}
+                  onCreateQuestion={handleCreateQuestion}
+                  onUpdateQuestion={handleUpdateQuestion}
+                  onDeleteQuestion={handleDeleteQuestion}
+                  onEditQuestion={handleEditQuestion}
+                  onResetQuestionForm={resetQuestionForm}
+                  addMeasurementUnitField={addMeasurementUnitField}
+                  removeMeasurementUnitField={removeMeasurementUnitField}
+                  setMeasurementUnitValue={setMeasurementUnitValue}
+                />
+              )}
+              {activeView === 'subscription' && <SubscriptionView />}
             </main>
           </div>
         </section>
       )}
-
-      {status?.text && (
-        <div className={`status-banner ${status.type}`}>
-          <p>{status.text}</p>
-        </div>
-      )}
+      <StatusBanner status={status} />
     </div>
   )
 }
