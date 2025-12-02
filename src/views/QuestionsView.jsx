@@ -1,3 +1,6 @@
+import Swal from 'sweetalert2'
+import editIcon from '../assets/edit.png'
+import deleteIcon from '../assets/delete.png'
 import { QUESTION_TYPES } from '../constants'
 
 function QuestionsView({
@@ -6,26 +9,29 @@ function QuestionsView({
   questionsError,
   questionsFilter,
   setQuestionsFilter,
-  questionForm,
-  setQuestionForm,
   questionPending,
   onRefresh,
-  onCreateQuestion,
-  onUpdateQuestion,
   onDeleteQuestion,
   onEditQuestion,
-  onResetQuestionForm,
-  addMeasurementUnitField,
-  removeMeasurementUnitField,
-  setMeasurementUnitValue,
 }) {
   const list = questionsData?.questions ?? []
-  const requiresUnits =
-    questionForm.questionType === 'weight' || questionForm.questionType === 'height'
-  const questionReady =
-    questionForm.prompt.trim() &&
-    questionForm.answer.trim() &&
-    (!requiresUnits || questionForm.measurementUnits.some((unit) => unit.trim().length > 0))
+  const handleDelete = (question) => {
+    Swal.fire({
+      title: 'Delete question?',
+      text: `This will remove "${question.prompt ?? 'this question'}".`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#94a3b8',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        onDeleteQuestion(question.id)
+      }
+    })
+  }
 
   return (
     <div className="panel questions-panel">
@@ -100,119 +106,28 @@ function QuestionsView({
                 </small>
               </div>
               <div className="question-actions">
-                <button className="secondary" onClick={() => onEditQuestion(question)}>
-                  Edit
+                <button
+                  className="question-icon-button"
+                  type="button"
+                  onClick={() => onEditQuestion(question)}
+                  title="Edit question"
+                >
+                  <img src={editIcon} alt="Edit question" />
                 </button>
                 <button
-                  className="danger"
-                  onClick={() => onDeleteQuestion(question.id)}
+                  className="question-icon-button danger"
+                  type="button"
+                  onClick={() => handleDelete(question)}
                   disabled={questionPending === `delete-${question.id}`}
+                  title="Delete question"
                 >
-                  {questionPending === `delete-${question.id}` ? 'Deleting...' : 'Delete'}
+                  <img src={deleteIcon} alt="Delete question" />
                 </button>
               </div>
             </article>
           ))}
         </div>
       )}
-      <div className="question-form">
-        <h3>{questionForm.id ? 'Update question' : 'Create question'}</h3>
-        <div className="question-form-grid">
-          <label>
-            Prompt
-            <input
-              type="text"
-              value={questionForm.prompt}
-              onChange={(event) =>
-                setQuestionForm((prev) => ({ ...prev, prompt: event.target.value }))
-              }
-              placeholder="Enter the question prompt"
-            />
-          </label>
-          <label>
-            Answer
-            <textarea
-              rows={1}
-              value={questionForm.answer}
-              onChange={(event) =>
-                setQuestionForm((prev) => ({ ...prev, answer: event.target.value }))
-              }
-              placeholder="Default answer or guidance"
-            />
-          </label>
-          <label>
-            Question type
-            <select
-              value={questionForm.questionType}
-              onChange={(event) =>
-                setQuestionForm((prev) => ({ ...prev, questionType: event.target.value }))
-              }
-            >
-              <option value="">Select type</option>
-              {QUESTION_TYPES.filter((type) => type.value !== '').map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Gender
-            <select
-              value={questionForm.gender}
-              onChange={(event) =>
-                setQuestionForm((prev) => ({ ...prev, gender: event.target.value || 'All' }))
-              }
-            >
-              <option value="All">All</option>
-              <option value="Female">Female</option>
-              <option value="Male">Male</option>
-            </select>
-          </label>
-          <div className="measurement-unit-group">
-            <div className="measurement-unit-header">
-              <span>Measurement units</span>
-              <button type="button" className="link-button" onClick={addMeasurementUnitField}>
-                Add unit
-              </button>
-            </div>
-            {questionForm.measurementUnits.map((unit, index) => (
-              <div key={index} className="measurement-unit-row">
-                <input
-                  type="text"
-                  value={unit}
-                  placeholder="e.g., kg"
-                  onChange={(event) => setMeasurementUnitValue(index, event.target.value)}
-                />
-                {questionForm.measurementUnits.length > 1 && (
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => removeMeasurementUnitField(index)}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            ))}
-            {requiresUnits && <small>Provide at least one unit for weight/height questions.</small>}
-          </div>
-        </div>
-        <div className="question-form-actions">
-          <button className="secondary" onClick={onResetQuestionForm} type="button">
-            Clear
-          </button>
-          {questionForm.id ? (
-            <button onClick={onUpdateQuestion} disabled={!questionReady || questionPending === 'update'}>
-              {questionPending === 'update' ? 'Saving…' : 'Save changes'}
-            </button>
-          ) : (
-            <button onClick={onCreateQuestion} disabled={!questionReady || questionPending === 'create'}>
-              {questionPending === 'create' ? 'Publishing…' : 'Publish question'}
-            </button>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

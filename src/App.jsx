@@ -38,6 +38,18 @@ import QuestionsView from './views/QuestionsView'
 import SubscriptionView from './views/SubscriptionView'
 import Sidebar from './components/layout/Sidebar'
 import StatusBanner from './components/shared/StatusBanner'
+import VideoModal from './components/modals/VideoModal'
+import QuestionModal from './components/modals/QuestionModal'
+
+const getDefaultVideoForm = () => ({
+  videoId: '',
+  bodyPart: VIDEO_CATEGORIES[0].value,
+  gender: VIDEO_GENDERS[0].value,
+  title: '',
+  description: '',
+  videoFile: null,
+  thumbnailFile: null,
+})
 
 function App() {
   const [email, setEmail] = useState('')
@@ -59,14 +71,9 @@ function App() {
   const [videosLoading, setVideosLoading] = useState(false)
   const [videosError, setVideosError] = useState(null)
   const [videoPending, setVideoPending] = useState('')
-  const [uploadForm, setUploadForm] = useState({
-    bodyPart: VIDEO_CATEGORIES[0].value,
-    gender: VIDEO_GENDERS[0].value,
-    title: '',
-    description: '',
-    videoFile: null,
-    thumbnailFile: null,
-  })
+  const [videoForm, setVideoForm] = useState(getDefaultVideoForm)
+  const [videoModalMode, setVideoModalMode] = useState('create')
+  const [isVideoModalOpen, setVideoModalOpen] = useState(false)
   const [questionsData, setQuestionsData] = useState(null)
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [questionsError, setQuestionsError] = useState(null)
@@ -83,15 +90,7 @@ function App() {
     questionType: '',
     measurementUnits: [''],
   })
-  const [updateForm, setUpdateForm] = useState({
-    videoId: '',
-    bodyPart: '',
-    gender: '',
-    title: '',
-    description: '',
-    videoFile: null,
-    thumbnailFile: null,
-  })
+  const [isQuestionModalOpen, setQuestionModalOpen] = useState(false)
 
   const isLoggedIn = useMemo(() => Boolean(token), [token])
   const trimmedEmail = email.trim().toLowerCase()
@@ -382,99 +381,96 @@ function App() {
     }
   }
 
-  const resetUploadForm = () =>
-    setUploadForm({
-      bodyPart: VIDEO_CATEGORIES[0].value,
-      gender: VIDEO_GENDERS[0].value,
-      title: '',
-      description: '',
-      videoFile: null,
-      thumbnailFile: null,
-    })
+  const resetVideoForm = () => setVideoForm(getDefaultVideoForm())
 
-  const resetUpdateForm = () =>
-    setUpdateForm({
-      videoId: '',
-      bodyPart: '',
-      gender: '',
-      title: '',
-      description: '',
-      videoFile: null,
-      thumbnailFile: null,
-    })
-
-  const handleUploadVideoAction = async () => {
-    if (!uploadForm.title.trim()) {
-      setStatus({ type: 'error', text: 'Enter a title for the video.' })
-      return
-    }
-    if (!uploadForm.videoFile || !uploadForm.thumbnailFile) {
-      setStatus({ type: 'error', text: 'Attach both video and thumbnail files.' })
-      return
-    }
-    setVideoPending('upload')
-    try {
-      const formData = new FormData()
-      formData.append('body_part', uploadForm.bodyPart)
-      formData.append('gender', uploadForm.gender)
-      if (uploadForm.title) {
-        formData.append('title', uploadForm.title)
-      }
-      if (uploadForm.description) {
-        formData.append('description', uploadForm.description)
-      }
-      formData.append('video_file', uploadForm.videoFile)
-      formData.append('thumbnail_file', uploadForm.thumbnailFile)
-      const response = await uploadVideo(formData, token)
-      setStatus({ type: 'success', text: response?.message ?? 'Video uploaded successfully.' })
-      resetUploadForm()
-      loadVideos(videoCategory)
-    } catch (error) {
-      handleApiError(error)
-    } finally {
-      setVideoPending('')
-    }
+  const openCreateVideoModal = () => {
+    setVideoModalMode('create')
+    resetVideoForm()
+    setVideoModalOpen(true)
   }
 
-  const handleUpdateVideoAction = async () => {
-    if (!updateForm.videoId) {
+  const openEditVideoModal = (video) => {
+    setVideoModalMode('edit')
+    setVideoForm({
+      videoId: String(video.id),
+      bodyPart: video.body_part ?? VIDEO_CATEGORIES[0].value,
+      gender: video.gender ?? VIDEO_GENDERS[0].value,
+      title: video.title ?? '',
+      description: video.description ?? '',
+      videoFile: null,
+      thumbnailFile: null,
+    })
+    setVideoModalOpen(true)
+  }
+
+  const closeVideoModal = () => {
+    setVideoModalOpen(false)
+    resetVideoForm()
+  }
+
+  const handleVideoModalSubmit = async () => {
+    if (videoModalMode === 'create') {
+      if (!videoForm.title.trim()) {
+        setStatus({ type: 'error', text: 'Enter a title for the video.' })
+        return
+      }
+      if (!videoForm.videoFile || !videoForm.thumbnailFile) {
+        setStatus({ type: 'error', text: 'Attach both video and thumbnail files.' })
+        return
+      }
+      setVideoPending('upload')
+      try {
+        const formData = new FormData()
+        formData.append('body_part', videoForm.bodyPart)
+        formData.append('gender', videoForm.gender)
+        formData.append('title', videoForm.title)
+        if (videoForm.description) {
+          formData.append('description', videoForm.description)
+        }
+        formData.append('video_file', videoForm.videoFile)
+        formData.append('thumbnail_file', videoForm.thumbnailFile)
+        const response = await uploadVideo(formData, token)
+        setStatus({ type: 'success', text: response?.message ?? 'Video uploaded successfully.' })
+        closeVideoModal()
+        loadVideos(videoCategory)
+      } catch (error) {
+        handleApiError(error)
+      } finally {
+        setVideoPending('')
+      }
+      return
+    }
+
+    if (!videoForm.videoId) {
       setStatus({ type: 'error', text: 'Select a video to update.' })
       return
     }
+
     const formData = new FormData()
-    let appendedField = false
-    if (updateForm.bodyPart) {
-      formData.append('body_part', updateForm.bodyPart)
-      appendedField = true
+    if (videoForm.bodyPart) {
+      formData.append('body_part', videoForm.bodyPart)
     }
-    if (updateForm.gender) {
-      formData.append('gender', updateForm.gender)
-      appendedField = true
+    if (videoForm.gender) {
+      formData.append('gender', videoForm.gender)
     }
-    if (updateForm.title) {
-      formData.append('title', updateForm.title)
-      appendedField = true
+    if (videoForm.title) {
+      formData.append('title', videoForm.title)
     }
-    if (updateForm.description) {
-      formData.append('description', updateForm.description)
-      appendedField = true
+    if (videoForm.description) {
+      formData.append('description', videoForm.description)
     }
-    if (updateForm.videoFile) {
-      formData.append('video_file', updateForm.videoFile)
-      appendedField = true
+    if (videoForm.videoFile) {
+      formData.append('video_file', videoForm.videoFile)
     }
-    if (updateForm.thumbnailFile) {
-      formData.append('thumbnail_file', updateForm.thumbnailFile)
-      appendedField = true
+    if (videoForm.thumbnailFile) {
+      formData.append('thumbnail_file', videoForm.thumbnailFile)
     }
-    if (!appendedField) {
-      setStatus({ type: 'error', text: 'Provide at least one field to update.' })
-      return
-    }
+
     setVideoPending('update')
     try {
-      const response = await updateVideo(updateForm.videoId, formData, token)
+      const response = await updateVideo(videoForm.videoId, formData, token)
       setStatus({ type: 'success', text: response?.message ?? 'Video updated successfully.' })
+      closeVideoModal()
       loadVideos(videoCategory)
     } catch (error) {
       handleApiError(error)
@@ -495,18 +491,6 @@ function App() {
     } finally {
       setVideoPending('')
     }
-  }
-
-  const handleSelectVideoForEdit = (video) => {
-    setUpdateForm({
-      videoId: String(video.id),
-      bodyPart: video.body_part ?? '',
-      gender: video.gender ?? '',
-      title: video.title ?? '',
-      description: video.description ?? '',
-      videoFile: null,
-      thumbnailFile: null,
-    })
   }
 
   const setMeasurementUnitValue = (index, value) => {
@@ -570,6 +554,7 @@ function App() {
       const response = await createQuestion(payload, token)
       setStatus({ type: 'success', text: response?.message ?? 'Question created successfully.' })
       resetQuestionForm()
+      setQuestionModalOpen(false)
       loadQuestions()
     } catch (error) {
       handleApiError(error)
@@ -589,6 +574,25 @@ function App() {
         ? question.measurement_units
         : [''],
     })
+    setQuestionModalOpen(true)
+  }
+
+  const openCreateQuestionModal = () => {
+    resetQuestionForm()
+    setQuestionModalOpen(true)
+  }
+
+  const closeQuestionModal = () => {
+    setQuestionModalOpen(false)
+    resetQuestionForm()
+  }
+
+  const handleQuestionModalSubmit = () => {
+    if (questionForm.id) {
+      handleUpdateQuestion()
+    } else {
+      handleCreateQuestion()
+    }
   }
 
   const handleUpdateQuestion = async () => {
@@ -602,6 +606,7 @@ function App() {
       const response = await updateQuestion(questionForm.id, payload, token)
       setStatus({ type: 'success', text: response?.message ?? 'Question updated successfully.' })
       resetQuestionForm()
+      setQuestionModalOpen(false)
       loadQuestions()
     } catch (error) {
       handleApiError(error)
@@ -663,6 +668,16 @@ function App() {
                   {profileComplete ? 'Profile complete' : 'Profile incomplete'}
                 </span>
                 {flowHint && <span className="pill neutral">Flow: {flowHint}</span>}
+                {activeView === 'videos' && (
+                  <button className="primary" onClick={openCreateVideoModal}>
+                    Upload Video
+                  </button>
+                )}
+                {activeView === 'questions' && (
+                  <button className="primary" onClick={openCreateQuestionModal}>
+                    New Question
+                  </button>
+                )}
               </div>
             </header>
             <main className="main-content">
@@ -678,18 +693,11 @@ function App() {
                   videosLoading={videosLoading}
                   videosError={videosError}
                   videoCategory={videoCategory}
-                  uploadForm={uploadForm}
-                  updateForm={updateForm}
                   videoPending={videoPending}
                   onCategoryChange={handleVideoCategoryChange}
                   onRefresh={() => loadVideos(videoCategory)}
-                  setUploadForm={setUploadForm}
-                  setUpdateForm={setUpdateForm}
-                  onUploadSubmit={handleUploadVideoAction}
-                  onSelectVideoForEdit={handleSelectVideoForEdit}
+                  onEditVideo={openEditVideoModal}
                   onDeleteVideo={handleDeleteVideo}
-                  onUpdateSubmit={handleUpdateVideoAction}
-                  onResetUpdateForm={resetUpdateForm}
                 />
               )}
               {activeView === 'questions' && (
@@ -699,18 +707,10 @@ function App() {
                   questionsError={questionsError}
                   questionsFilter={questionsFilter}
                   setQuestionsFilter={setQuestionsFilter}
-                  questionForm={questionForm}
-                  setQuestionForm={setQuestionForm}
                   questionPending={questionPending}
                   onRefresh={loadQuestions}
-                  onCreateQuestion={handleCreateQuestion}
-                  onUpdateQuestion={handleUpdateQuestion}
                   onDeleteQuestion={handleDeleteQuestion}
                   onEditQuestion={handleEditQuestion}
-                  onResetQuestionForm={resetQuestionForm}
-                  addMeasurementUnitField={addMeasurementUnitField}
-                  removeMeasurementUnitField={removeMeasurementUnitField}
-                  setMeasurementUnitValue={setMeasurementUnitValue}
                 />
               )}
               {activeView === 'subscription' && <SubscriptionView />}
@@ -719,6 +719,26 @@ function App() {
         </section>
       )}
       <StatusBanner status={status} />
+      <VideoModal
+        open={isVideoModalOpen}
+        mode={videoModalMode}
+        form={videoForm}
+        setForm={setVideoForm}
+        pendingAction={videoPending === 'upload' || videoPending === 'update' ? videoPending : ''}
+        onClose={closeVideoModal}
+        onSubmit={handleVideoModalSubmit}
+      />
+      <QuestionModal
+        open={isQuestionModalOpen}
+        form={questionForm}
+        setForm={setQuestionForm}
+        pendingAction={questionPending === 'create' || questionPending === 'update' ? questionPending : ''}
+        onClose={closeQuestionModal}
+        onSubmit={handleQuestionModalSubmit}
+        addMeasurementUnitField={addMeasurementUnitField}
+        removeMeasurementUnitField={removeMeasurementUnitField}
+        setMeasurementUnitValue={setMeasurementUnitValue}
+      />
     </div>
   )
 }
