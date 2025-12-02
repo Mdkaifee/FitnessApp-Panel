@@ -18,6 +18,43 @@ import {
 import './App.css'
 
 const TOKEN_KEY = 'fitness_admin_access_token'
+const ACTIVE_VIEW_KEY = 'fitness_admin_active_view'
+const WORKSPACE_VIEWS = new Set(['dashboard', 'users', 'videos', 'questions', 'subscription'])
+
+const safeGetFromStorage = (key) => {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+const safeSetInStorage = (key, value) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // Ignore storage write failures (e.g., private browsing)
+  }
+}
+
+const safeRemoveFromStorage = (key) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // Ignore storage removal failures
+  }
+}
+
+const getInitialToken = () => safeGetFromStorage(TOKEN_KEY) ?? ''
+const getInitialActiveView = () => {
+  const storedToken = safeGetFromStorage(TOKEN_KEY)
+  if (!storedToken) return 'login'
+  const storedView = safeGetFromStorage(ACTIVE_VIEW_KEY)
+  return storedView && WORKSPACE_VIEWS.has(storedView) ? storedView : 'dashboard'
+}
 const VIDEO_CATEGORIES = [
   { label: 'NewCore', value: 'NewCore' },
   { label: 'NewArms', value: 'NewArms' },
@@ -44,13 +81,14 @@ function App() {
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [flowHint, setFlowHint] = useState(null)
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? '')
+  const [token, setToken] = useState(getInitialToken)
   const [profile, setProfile] = useState(null)
   const [profileComplete, setProfileComplete] = useState(false)
   const [profileLoading, setProfileLoading] = useState(false)
   const [usersData, setUsersData] = useState(null)
   const [usersLoading, setUsersLoading] = useState(false)
-  const [activeView, setActiveView] = useState(token ? 'dashboard' : 'login')
+  const [activeView, setActiveView] = useState(getInitialActiveView)
+  const [sessionHydrated, setSessionHydrated] = useState(() => typeof window !== 'undefined')
   const [status, setStatus] = useState(null)
   const [pendingAction, setPendingAction] = useState('')
   const [resendSeconds, setResendSeconds] = useState(0)
@@ -140,6 +178,8 @@ function App() {
     setProfileComplete(false)
     setHasRequestedOtp(false)
     setResendSeconds(0)
+    safeRemoveFromStorage(TOKEN_KEY)
+    safeRemoveFromStorage(ACTIVE_VIEW_KEY)
   }, [])
 
   const handleApiError = useCallback(
@@ -217,12 +257,37 @@ function App() {
   }, [handleApiError, questionsFilter, token])
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem(TOKEN_KEY, token)
-    } else {
-      localStorage.removeItem(TOKEN_KEY)
+    if (sessionHydrated) return
+    const storedToken = safeGetFromStorage(TOKEN_KEY)
+    if (storedToken) {
+      setToken(storedToken)
+      const storedView = safeGetFromStorage(ACTIVE_VIEW_KEY)
+      if (storedView && WORKSPACE_VIEWS.has(storedView)) {
+        setActiveView(storedView)
+      } else {
+        setActiveView('dashboard')
+      }
     }
-  }, [token])
+    setSessionHydrated(true)
+  }, [sessionHydrated])
+
+  useEffect(() => {
+    if (!sessionHydrated) return
+    if (token) {
+      safeSetInStorage(TOKEN_KEY, token)
+    } else {
+      safeRemoveFromStorage(TOKEN_KEY)
+    }
+  }, [token, sessionHydrated])
+
+  useEffect(() => {
+    if (!sessionHydrated) return
+    if (!token || activeView === 'login') {
+      safeRemoveFromStorage(ACTIVE_VIEW_KEY)
+      return
+    }
+    safeSetInStorage(ACTIVE_VIEW_KEY, activeView)
+  }, [activeView, token, sessionHydrated])
 
   useEffect(() => {
     if (status?.type !== 'error' && status?.text) {
