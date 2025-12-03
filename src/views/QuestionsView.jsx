@@ -77,8 +77,8 @@ function QuestionsView({
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
-          <button className="refresh-button" onClick={onRefresh}>
-            {questionsLoading ? 'Refreshing...' : 'Refresh'}
+          <button className="refresh-button" onClick={onRefresh} aria-label="Refresh questions">
+            ↻
           </button>
         </div>
       </div>

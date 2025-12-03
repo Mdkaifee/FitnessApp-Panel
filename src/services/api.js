@@ -27,22 +27,24 @@ async function apiRequest(path, { method = 'GET', body, token, isFormData = fals
   return data
 }
 
+const adminPayload = (email, extra = {}) => ({ email, is_admin: true, ...extra })
+
 export const requestOtp = (email) =>
   apiRequest('/auth/otp/request', {
     method: 'POST',
-    body: { email },
+    body: adminPayload(email),
   })
 
 export const resendOtp = (email) =>
   apiRequest('/auth/otp/resend', {
     method: 'POST',
-    body: { email },
+    body: adminPayload(email),
   })
 
 export const verifyOtp = (email, otp) =>
   apiRequest('/auth/otp/verify', {
     method: 'POST',
-    body: { email, otp },
+    body: adminPayload(email, { otp }),
   })
 
 export const logoutSession = (token) =>

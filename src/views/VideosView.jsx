@@ -53,8 +53,8 @@ function VideosView({
               </option>
             ))}
           </select>
-          <button className="btn btn-refresh" onClick={onRefresh}>
-            {videosLoading ? 'Refreshing…' : 'Refresh'}
+          <button className="refresh-button" onClick={onRefresh} aria-label="Refresh videos">
+            ↻
           </button>
         </div>
       </div>
