@@ -1,3 +1,5 @@
+import { buildMediaUrl } from '../utils/media'
+
 function DashboardView({ profile, isLoading, onRefresh }) {
   if (isLoading) {
     return (
@@ -23,6 +25,7 @@ function DashboardView({ profile, isLoading, onRefresh }) {
       .join('') ||
     profile.email?.[0]?.toUpperCase() ||
     'U'
+  const photoUrl = buildMediaUrl(profile.photo)
   const infoRows = [
     { label: 'Name', value: fullName },
     { label: 'Email', value: profile.email },
@@ -48,7 +51,7 @@ function DashboardView({ profile, isLoading, onRefresh }) {
         <div className="profile-identity">
           <div className="profile-avatar">
             {profile.photo ? (
-              <img src={profile.photo} alt={fullName} />
+              <img src={photoUrl} alt={fullName} />
             ) : (
               <span>{initials}</span>
             )}
@@ -68,7 +71,7 @@ function DashboardView({ profile, isLoading, onRefresh }) {
           <div className="profile-info-card">
             <span className="label">Photo</span>
             {profile.photo ? (
-              <a href={profile.photo} target="_blank" rel="noreferrer" className="link-button">
+              <a href={photoUrl} target="_blank" rel="noreferrer" className="link-button">
                 View photo
               </a>
             ) : (

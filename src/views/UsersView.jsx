@@ -1,3 +1,5 @@
+import { buildMediaUrl } from '../utils/media'
+
 function UsersView({ usersData, isLoading, onRefresh }) {
   if (isLoading) {
     return (
@@ -66,7 +68,12 @@ function UsersView({ usersData, isLoading, onRefresh }) {
                   <div className="user-field">
                     <span className="label">Photo</span>
                     {user.photo ? (
-                      <a className="link-button" href={user.photo} target="_blank" rel="noreferrer">
+                      <a
+                        className="link-button"
+                        href={buildMediaUrl(user.photo)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         View photo
                       </a>
                     ) : (
