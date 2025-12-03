@@ -89,7 +89,7 @@ function VideosView({
                 </div>
 
                 <div className="video-footer">
-                  <span className="video-id">#{video.id}</span>
+                  <span className="video-id">{video.id}</span>
                   <span className="video-date">{createdOn}</span>
                 </div>
 

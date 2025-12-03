@@ -1,6 +1,6 @@
 import { buildMediaUrl } from '../utils/media'
 
-function UsersView({ usersData, isLoading, onRefresh }) {
+function UsersView({ usersData, isLoading, onRefresh, onNextPage, hasNext, page }) {
   if (isLoading) {
     return (
       <div className="panel">
@@ -20,70 +20,73 @@ function UsersView({ usersData, isLoading, onRefresh }) {
   const list = usersData.users ?? []
 
   return (
-    <div className="panel">
+    <div className="panel users-table-panel">
       <div className="panel-header">
         <div>
           <h2>All Users</h2>
-          <p>Showing {usersData.count ?? list.length} total accounts.</p>
+          <p>Showing {usersData?.total ?? list.length} total accounts.</p>
         </div>
-        <button className="link-button" onClick={onRefresh}>
-          Refresh
+        <button className="refresh-button" onClick={onRefresh} aria-label="Refresh users list">
+          ↻
         </button>
       </div>
       {list.length === 0 ? (
         <p>No users available.</p>
       ) : (
-        <div className="users-list">
-          {list.map((user, index) => {
-            const fullName =
-              [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email || '—'
-            return (
-              <article className="user-card" key={user.id}>
-                <header className="user-card__header">
-                  <div>
-                    <span className="user-card__id">#{index + 1}</span>
-                    <p className="user-card__name">{fullName}</p>
-                  </div>
-                  <span className={`pill ${user.is_active ? 'success' : 'danger'}`}>
-                    {user.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </header>
-                <div className="user-card__grid">
-                  <div className="user-field">
-                    <span className="label">Email</span>
-                    <span>{user.email ?? '—'}</span>
-                  </div>
-                  <div className="user-field">
-                    <span className="label">Phone</span>
-                    <span>{user.phone ?? '—'}</span>
-                  </div>
-                  <div className="user-field">
-                    <span className="label">DOB</span>
-                    <span>{user.dob ?? '—'}</span>
-                  </div>
-                  <div className="user-field">
-                    <span className="label">Gender</span>
-                    <span>{user.gender ?? '—'}</span>
-                  </div>
-                  <div className="user-field">
-                    <span className="label">Photo</span>
-                    {user.photo ? (
-                      <a
-                        className="link-button"
-                        href={buildMediaUrl(user.photo)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        View photo
-                      </a>
-                    ) : (
-                      <span>—</span>
-                    )}
-                  </div>
-                </div>
-              </article>
-            )
-          })}
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>DOB</th>
+                <th>Gender</th>
+                <th>Status</th>
+                <th>Photo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((user, index) => {
+                const fullName =
+                  [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || '—'
+                return (
+                  <tr key={user.id}>
+                    <td>{index + 1}</td>
+                    <td>{fullName}</td>
+                    <td>{user.email ?? '—'}</td>
+                    <td>{user.phone ?? '—'}</td>
+                    <td>{user.dob ?? '—'}</td>
+                    <td>{user.gender ?? '—'}</td>
+                    <td>
+                      <span className={`pill ${user.is_active ? 'success' : 'danger'}`}>
+                        {user.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      {user.photo ? (
+                        <a href={buildMediaUrl(user.photo)} target="_blank" rel="noreferrer">
+                          View photo
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <div className="table-footer">
+            <div>
+              Page {usersData?.page ?? page} · Showing {usersData?.count ?? list.length} of{' '}
+              {usersData?.total ?? '—'}
+            </div>
+            <button className="link-button" disabled={!hasNext || isLoading} onClick={onNextPage}>
+              {isLoading ? 'Loading…' : hasNext ? 'Load more' : 'No more results'}
+            </button>
+          </div>
         </div>
       )}
     </div>

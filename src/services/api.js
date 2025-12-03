@@ -126,3 +126,6 @@ export const deleteQuestion = (questionId, token) =>
     method: 'DELETE',
     token,
   })
+
+export const fetchUsersPaginated = ({ page, pageSize }, token) =>
+  apiRequest(`/users?page=${page}&page_size=${pageSize}`, { token })

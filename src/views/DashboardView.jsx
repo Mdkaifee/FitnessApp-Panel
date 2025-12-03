@@ -17,7 +17,8 @@ function DashboardView({ profile, isLoading, onRefresh }) {
     )
   }
 
-  const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || '—'
+  const rawName = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim()
+  const fullName = rawName || '—'
   const initials =
     [profile.first_name, profile.last_name]
       .filter(Boolean)
@@ -43,8 +44,8 @@ function DashboardView({ profile, isLoading, onRefresh }) {
           <h2>Account overview</h2>
           <p>Account overview and profile information.</p>
         </div>
-        <button className="refresh-button" onClick={() => onRefresh?.()}>
-          Refresh
+        <button className="refresh-button" onClick={() => onRefresh?.()} aria-label="Refresh profile">
+          ↻
         </button>
       </div>
       <div className="profile-panel__body">

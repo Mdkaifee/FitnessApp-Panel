@@ -5,7 +5,7 @@ import {
   verifyOtp,
   logoutSession,
   fetchProfile,
-  fetchUsers,
+  fetchUsersPaginated,
   fetchVideosByCategory,
   uploadVideo,
   updateVideo,
@@ -63,6 +63,8 @@ function App() {
   const [profileLoading, setProfileLoading] = useState(false)
   const [usersData, setUsersData] = useState(null)
   const [usersLoading, setUsersLoading] = useState(false)
+  const [usersPage, setUsersPage] = useState(1)
+  const [usersHasNext, setUsersHasNext] = useState(false)
   const [activeView, setActiveView] = useState(() => getInitialActiveView())
   const [status, setStatus] = useState(null)
   const [pendingAction, setPendingAction] = useState('')
@@ -174,18 +176,32 @@ function App() {
     }
   }, [handleApiError, token])
 
-  const loadUsers = useCallback(async () => {
-    if (!token) return
-    setUsersLoading(true)
-    try {
-      const response = await fetchUsers(token)
-      setUsersData(response?.data ?? null)
-    } catch (error) {
-      handleApiError(error)
-    } finally {
-      setUsersLoading(false)
-    }
-  }, [handleApiError, token])
+  const loadUsers = useCallback(
+    async (page = 1, pageSize = 20) => {
+      if (!token) return
+      setUsersLoading(true)
+      try {
+        const response = await fetchUsersPaginated({ page, pageSize }, token)
+        const payload = response?.data ?? {}
+        setUsersData((prev) => {
+          const previousUsers = page === 1 ? [] : prev?.users ?? []
+          const mergedUsers = [...previousUsers, ...(payload.users ?? [])]
+          return {
+            ...payload,
+            users: mergedUsers,
+            displayed_count: mergedUsers.length,
+          }
+        })
+        setUsersPage(payload.page ?? page)
+        setUsersHasNext(Boolean(payload.has_next))
+      } catch (error) {
+        handleApiError(error)
+      } finally {
+        setUsersLoading(false)
+      }
+    },
+    [handleApiError, token],
+  )
 
   const loadVideos = useCallback(
     async (categoryOverride) => {
@@ -266,7 +282,7 @@ function App() {
 
   useEffect(() => {
     if (isLoggedIn && activeView === 'users') {
-      loadUsers()
+      loadUsers(1)
     }
   }, [activeView, isLoggedIn, loadUsers])
 
@@ -667,6 +683,11 @@ function App() {
     }
   }
 
+  const handleUsersNextPage = useCallback(() => {
+    if (!usersHasNext || usersLoading) return
+    loadUsers((usersPage ?? 1) + 1)
+  }, [loadUsers, usersHasNext, usersLoading, usersPage])
+
   const signedEmail = profile?.email ?? trimmedEmail
 
   return (
@@ -723,7 +744,14 @@ function App() {
                 <DashboardView profile={profile} isLoading={profileLoading} onRefresh={loadProfile} />
               )}
               {activeView === 'users' && (
-                <UsersView usersData={usersData} isLoading={usersLoading} onRefresh={loadUsers} />
+                <UsersView
+                  usersData={usersData}
+                  isLoading={usersLoading}
+                  onRefresh={() => loadUsers(1)}
+                  onNextPage={handleUsersNextPage}
+                  hasNext={usersHasNext}
+                  page={usersPage}
+                />
               )}
               {activeView === 'videos' && (
                 <VideosView
