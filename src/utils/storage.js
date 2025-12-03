@@ -1,4 +1,9 @@
-import { ACTIVE_VIEW_KEY, TOKEN_KEY, WORKSPACE_VIEWS } from '../constants'
+import {
+  ACTIVE_VIEW_KEY,
+  ROUTE_TO_WORKSPACE_VIEW,
+  TOKEN_KEY,
+  WORKSPACE_VIEWS,
+} from '../constants'
 
 export const safeGetFromStorage = (key) => {
   if (typeof window === 'undefined') return null
@@ -32,6 +37,12 @@ export const getInitialToken = () => safeGetFromStorage(TOKEN_KEY) ?? ''
 export const getInitialActiveView = () => {
   const storedToken = safeGetFromStorage(TOKEN_KEY)
   if (!storedToken) return 'login'
+  if (typeof window !== 'undefined') {
+    const pathView = ROUTE_TO_WORKSPACE_VIEW[window.location.pathname]
+    if (pathView && WORKSPACE_VIEWS.has(pathView)) {
+      return pathView
+    }
+  }
   const storedView = safeGetFromStorage(ACTIVE_VIEW_KEY)
   return storedView && WORKSPACE_VIEWS.has(storedView) ? storedView : 'dashboard'
 }

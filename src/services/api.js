@@ -27,7 +27,7 @@ async function apiRequest(path, { method = 'GET', body, token, isFormData = fals
   return data
 }
 
-const adminPayload = (email, extra = {}) => ({ email, is_admin: true, ...extra })
+const adminPayload = (email, extra = {}) => ({ email, is_admin: true, platform: 'web', ...extra })
 
 export const requestOtp = (email) =>
   apiRequest('/auth/otp/request', {

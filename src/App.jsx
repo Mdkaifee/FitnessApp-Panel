@@ -18,9 +18,12 @@ import {
 import './App.css'
 import {
   ACTIVE_VIEW_KEY,
+  AUTH_EMAIL_KEY,
+  ROUTE_TO_WORKSPACE_VIEW,
   TOKEN_KEY,
   VIDEO_CATEGORIES,
   VIDEO_GENDERS,
+  WORKSPACE_VIEW_ROUTES,
   WORKSPACE_VIEWS,
   GENDER_ALL_LABEL,
   GENDER_API_BOTH,
@@ -43,6 +46,13 @@ import StatusBanner from './components/shared/StatusBanner'
 import VideoModal from './components/modals/VideoModal'
 import QuestionModal from './components/modals/QuestionModal'
 
+const getInitialEmail = () => safeGetFromStorage(AUTH_EMAIL_KEY) ?? ''
+
+const getInitialAuthStep = () => {
+  if (typeof window === 'undefined') return 'login'
+  return window.location.pathname === '/verify-otp' ? 'otp' : 'login'
+}
+
 const getDefaultVideoForm = () => ({
   videoId: '',
   bodyPart: VIDEO_CATEGORIES[0].value,
@@ -54,8 +64,9 @@ const getDefaultVideoForm = () => ({
 })
 
 function App() {
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(getInitialEmail)
   const [otp, setOtp] = useState('')
+  const [authStep, setAuthStep] = useState(getInitialAuthStep)
   const [flowHint, setFlowHint] = useState(null)
   const [token, setToken] = useState(() => getInitialToken())
   const [profile, setProfile] = useState(null)
@@ -137,6 +148,16 @@ function App() {
     }
   }, [activeView])
 
+  const navigateAuthStep = useCallback((nextStep) => {
+    setAuthStep(nextStep)
+    if (typeof window !== 'undefined') {
+      const target = nextStep === 'otp' ? '/verify-otp' : '/'
+      if (window.location.pathname !== target) {
+        window.history.pushState({ authStep: nextStep }, '', target)
+      }
+    }
+  }, [])
+
   const resetSession = useCallback(() => {
     setToken('')
     setProfile(null)
@@ -145,9 +166,10 @@ function App() {
     setProfileComplete(false)
     setHasRequestedOtp(false)
     setResendSeconds(0)
+    navigateAuthStep('login')
     safeRemoveFromStorage(TOKEN_KEY)
     safeRemoveFromStorage(ACTIVE_VIEW_KEY)
-  }, [])
+  }, [navigateAuthStep])
 
   const handleApiError = useCallback(
     (error) => {
@@ -306,6 +328,58 @@ function App() {
     return () => clearInterval(timer)
   }, [resendSeconds])
 
+  useEffect(() => {
+    const normalized = email.trim().toLowerCase()
+    if (normalized) {
+      safeSetInStorage(AUTH_EMAIL_KEY, normalized)
+    } else {
+      safeRemoveFromStorage(AUTH_EMAIL_KEY)
+    }
+  }, [email])
+
+  useEffect(() => {
+    if (isLoggedIn) return
+    if (typeof window === 'undefined') return
+    const desiredPath = authStep === 'otp' ? '/verify-otp' : '/'
+    if (window.location.pathname !== desiredPath) {
+      window.history.replaceState({ authStep }, '', desiredPath)
+    }
+  }, [authStep, isLoggedIn])
+
+  useEffect(() => {
+    if (!isLoggedIn) return
+    if (typeof window === 'undefined') return
+    if (!WORKSPACE_VIEWS.has(activeView)) return
+    const targetPath =
+      WORKSPACE_VIEW_ROUTES[activeView] ?? WORKSPACE_VIEW_ROUTES.dashboard ?? '/dashboard'
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ view: activeView }, '', targetPath)
+    }
+  }, [activeView, isLoggedIn])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return
+      const path = window.location.pathname
+      if (path === '/verify-otp') {
+        navigateAuthStep('otp')
+        return
+      }
+      const workspaceView = ROUTE_TO_WORKSPACE_VIEW[path]
+      if (workspaceView) {
+        if (isLoggedIn) {
+          setActiveView(workspaceView)
+        } else {
+          navigateAuthStep('login')
+        }
+        return
+      }
+      navigateAuthStep('login')
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [isLoggedIn, navigateAuthStep, setActiveView])
+
   const handleRequestOtp = async () => {
     if (!trimmedEmail) {
       setStatus({ type: 'error', text: 'Please enter an email address.' })
@@ -319,6 +393,7 @@ function App() {
       setHasRequestedOtp(true)
       setResendSeconds(120)
       setStatus({ type: 'success', text: response?.message ?? 'OTP sent successfully.' })
+      navigateAuthStep('otp')
     } catch (error) {
       handleApiError(error)
     } finally {
@@ -338,6 +413,7 @@ function App() {
       setFlowHint(response?.data?.flow ?? null)
       setResendSeconds(120)
       setStatus({ type: 'success', text: response?.message ?? 'OTP resent successfully.' })
+      navigateAuthStep('otp')
     } catch (error) {
       handleApiError(error)
     } finally {
@@ -688,12 +764,21 @@ function App() {
     loadUsers((usersPage ?? 1) + 1)
   }, [loadUsers, usersHasNext, usersLoading, usersPage])
 
+  const handleBackToLoginStep = () => {
+    navigateAuthStep('login')
+    setOtp('')
+    setHasRequestedOtp(false)
+    setResendSeconds(0)
+    setStatus({ type: 'info', text: 'Enter a new email address to request another OTP.' })
+  }
+
   const signedEmail = profile?.email ?? trimmedEmail
 
   return (
     <div className="app-shell">
       {!isLoggedIn ? (
         <AuthView
+          authStep={authStep}
           email={email}
           otp={otp}
           flowHint={flowHint}
@@ -706,6 +791,7 @@ function App() {
           onResendOtp={handleResendOtp}
           onVerifyOtp={handleVerifyOtp}
           onOtpChange={handleOtpChange}
+          onBackToLogin={handleBackToLoginStep}
         />
       ) : (
         <section className="workspace">
@@ -734,7 +820,7 @@ function App() {
                 )}
                 {activeView === 'questions' && (
                   <button className="primary" onClick={openCreateQuestionModal}>
-                    New Question
+                    Add Question
                   </button>
                 )}
               </div>

@@ -1,6 +1,23 @@
 export const TOKEN_KEY = 'fitness_admin_access_token'
 export const ACTIVE_VIEW_KEY = 'fitness_admin_active_view'
+export const AUTH_EMAIL_KEY = 'fitness_admin_auth_email'
 export const WORKSPACE_VIEWS = new Set(['dashboard', 'users', 'videos', 'questions', 'subscription'])
+
+export const WORKSPACE_VIEW_ROUTES = {
+  dashboard: '/dashboard',
+  users: '/users',
+  videos: '/videos',
+  questions: '/questions',
+  subscription: '/subscription',
+}
+
+export const ROUTE_TO_WORKSPACE_VIEW = Object.entries(WORKSPACE_VIEW_ROUTES).reduce(
+  (acc, [view, path]) => {
+    acc[path] = view
+    return acc
+  },
+  {},
+)
 
 export const GENDER_ALL_LABEL = 'All'
 export const GENDER_API_BOTH = 'Both'
