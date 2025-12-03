@@ -131,3 +131,9 @@ export const deleteQuestion = (questionId, token) =>
 
 export const fetchUsersPaginated = ({ page, pageSize }, token) =>
   apiRequest(`/users?page=${page}&page_size=${pageSize}`, { token })
+
+export const updateUserStatus = (userId, isActive, token) =>
+  apiRequest(`/users/${userId}/status?is_active=${isActive ? 'true' : 'false'}`, {
+    method: 'PUT',
+    token,
+  })

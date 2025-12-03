@@ -14,6 +14,7 @@ import {
   createQuestion,
   updateQuestion,
   deleteQuestion,
+  updateUserStatus,
 } from './services/api'
 import './App.css'
 import {
@@ -76,6 +77,7 @@ function App() {
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersPage, setUsersPage] = useState(1)
   const [usersHasNext, setUsersHasNext] = useState(false)
+  const [userStatusPending, setUserStatusPending] = useState('')
   const [activeView, setActiveView] = useState(() => getInitialActiveView())
   const [status, setStatus] = useState(null)
   const [pendingAction, setPendingAction] = useState('')
@@ -764,6 +766,32 @@ function App() {
     loadUsers((usersPage ?? 1) + 1)
   }, [loadUsers, usersHasNext, usersLoading, usersPage])
 
+  const handleUserStatusChange = async (userId, nextActive) => {
+    if (!userId || !token) return
+    setUserStatusPending(String(userId))
+    try {
+      const response = await updateUserStatus(userId, nextActive, token)
+      const updatedUser = response?.data ?? null
+      if (updatedUser) {
+        setUsersData((prev) => {
+          if (!prev) return prev
+          const nextUsers = (prev.users ?? []).map((user) =>
+            user.id === updatedUser.id ? { ...user, ...updatedUser } : user,
+          )
+          return { ...prev, users: nextUsers }
+        })
+      }
+      setStatus({
+        type: 'success',
+        text: response?.message ?? `User ${nextActive ? 'activated' : 'deactivated'}.`,
+      })
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setUserStatusPending('')
+    }
+  }
+
   const handleBackToLoginStep = () => {
     navigateAuthStep('login')
     setOtp('')
@@ -837,6 +865,8 @@ function App() {
                   onNextPage={handleUsersNextPage}
                   hasNext={usersHasNext}
                   page={usersPage}
+                  onToggleStatus={handleUserStatusChange}
+                  statusPending={userStatusPending}
                 />
               )}
               {activeView === 'videos' && (

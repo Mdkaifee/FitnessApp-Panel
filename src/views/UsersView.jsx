@@ -1,6 +1,15 @@
 import { buildMediaUrl } from '../utils/media'
 
-function UsersView({ usersData, isLoading, onRefresh, onNextPage, hasNext, page }) {
+function UsersView({
+  usersData,
+  isLoading,
+  onRefresh,
+  onNextPage,
+  hasNext,
+  page,
+  onToggleStatus,
+  statusPending,
+}) {
   if (isLoading) {
     return (
       <div className="panel">
@@ -45,12 +54,14 @@ function UsersView({ usersData, isLoading, onRefresh, onNextPage, hasNext, page 
                 <th>Gender</th>
                 <th>Status</th>
                 <th>Photo</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {list.map((user, index) => {
                 const fullName =
                   [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || '—'
+                const isActionDisabled = statusPending === String(user.id) || isLoading
                 return (
                   <tr key={user.id}>
                     <td>{index + 1}</td>
@@ -72,6 +83,20 @@ function UsersView({ usersData, isLoading, onRefresh, onNextPage, hasNext, page 
                       ) : (
                         '—'
                       )}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="link-button"
+                        disabled={isActionDisabled}
+                        onClick={() => onToggleStatus?.(user.id, !user.is_active)}
+                      >
+                        {isActionDisabled
+                          ? 'Updating…'
+                          : user.is_active
+                            ? 'Deactivate'
+                            : 'Activate'}
+                      </button>
                     </td>
                   </tr>
                 )
