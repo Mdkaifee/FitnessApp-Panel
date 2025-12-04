@@ -8,14 +8,18 @@ function VideosView({
   videosData,
   videosLoading,
   videosError,
+  videosHasNext,
   videoCategory,
   videoPending,
   onCategoryChange,
   onRefresh,
   onEditVideo,
   onDeleteVideo,
+  onLoadMore,
 }) {
   const list = videosData?.videos ?? []
+  const totalVideos = videosData?.total ?? list.length
+  const currentPage = videosData?.page ?? 1
 
   const handleDelete = (video) => {
     Swal.fire({
@@ -41,8 +45,14 @@ function VideosView({
         <div>
           <h2 className="videos-title">🎬 Video Library</h2>
           <p className="videos-subtitle">
-            Showing <strong>{videosData?.count ?? list.length}</strong> videos in category{' '}
-            <strong>{videoCategory}</strong>
+            Showing <strong>{list.length}</strong>
+            {typeof totalVideos === 'number' ? (
+              <>
+                {' '}
+                of <strong>{totalVideos}</strong>
+              </>
+            ) : null}{' '}
+            videos in category <strong>{videoCategory}</strong>
           </p>
         </div>
         <div className="videos-controls">
@@ -66,71 +76,85 @@ function VideosView({
       ) : list.length === 0 ? (
         <div className="empty-state">No videos found in this category.</div>
       ) : (
-        <div className="videos-grid">
-          {list.map((video) => {
-            const createdOn = video.created_at ? new Date(video.created_at).toLocaleDateString() : '—'
-            return (
-              <div className="video-card" key={video.id}>
-                <div className="video-thumb">
-                  {video.thumbnail_url ? (
-                    <img src={video.thumbnail_url} alt={video.title ?? 'Video thumbnail'} />
-                  ) : (
-                    <div className="thumb-placeholder">No Thumbnail</div>
-                  )}
-                </div>
-
-                <div className="video-info">
-                  <div className="video-tags">
-                    <span className="tag">{video.body_part ?? '—'}</span>
-                    <span className="tag">{video.gender ?? '—'}</span>
+        <>
+          <div className="videos-grid">
+            {list.map((video) => {
+              const createdOn = video.created_at ? new Date(video.created_at).toLocaleDateString() : '—'
+              return (
+                <div className="video-card" key={video.id}>
+                  <div className="video-thumb">
+                    {video.thumbnail_url ? (
+                      <img src={video.thumbnail_url} alt={video.title ?? 'Video thumbnail'} />
+                    ) : (
+                      <div className="thumb-placeholder">No Thumbnail</div>
+                    )}
                   </div>
-                  <h3 className="video-title">{video.title ?? 'Untitled Video'}</h3>
-                  <p className="video-desc">{video.description ?? 'No description available.'}</p>
-                </div>
 
-                <div className="video-footer">
-                  <span className="video-id">{video.id}</span>
-                  <span className="video-date">{createdOn}</span>
-                </div>
+                  <div className="video-info">
+                    <div className="video-tags">
+                      <span className="tag">{video.body_part ?? '—'}</span>
+                      <span className="tag">{video.gender ?? '—'}</span>
+                    </div>
+                    <h3 className="video-title">{video.title ?? 'Untitled Video'}</h3>
+                    <p className="video-desc">{video.description ?? 'No description available.'}</p>
+                  </div>
 
-                <div className="video-actions">
-                  <div className="actions-right">
-                    <button
-                      type="button"
-                      className="btn-icon"
-                      onClick={() => {
-                        if (video.video_url) {
-                          window.open(video.video_url, '_blank', 'noopener,noreferrer')
-                        }
-                      }}
-                      title={video.video_url ? 'Watch video' : 'No video attached'}
-                      disabled={!video.video_url}
-                    >
-                      <img src={playIcon} alt="Watch video" />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-icon"
-                      onClick={() => onEditVideo(video)}
-                      title="Edit video"
-                    >
-                      <img src={editIcon} alt="Edit video" />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-icon"
-                      onClick={() => handleDelete(video)}
-                      disabled={videoPending === `delete-${video.id}`}
-                      title="Delete video"
-                    >
-                      <img src={deleteIcon} alt="Delete video" />
-                    </button>
+                  <div className="video-footer">
+                    <span className="video-id">{video.id}</span>
+                    <span className="video-date">{createdOn}</span>
+                  </div>
+
+                  <div className="video-actions">
+                    <div className="actions-right">
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => {
+                          if (video.video_url) {
+                            window.open(video.video_url, '_blank', 'noopener,noreferrer')
+                          }
+                        }}
+                        title={video.video_url ? 'Watch video' : 'No video attached'}
+                        disabled={!video.video_url}
+                      >
+                        <img src={playIcon} alt="Watch video" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => onEditVideo(video)}
+                        title="Edit video"
+                      >
+                        <img src={editIcon} alt="Edit video" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => handleDelete(video)}
+                        disabled={videoPending === `delete-${video.id}`}
+                        title="Delete video"
+                      >
+                        <img src={deleteIcon} alt="Delete video" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+          <div className="videos-footer">
+            <span>
+              Page {currentPage} · Loaded {list.length} of {typeof totalVideos === 'number' ? totalVideos : '—'}
+            </span>
+            <button
+              className="link-button"
+              onClick={onLoadMore}
+              disabled={videosLoading || !videosHasNext}
+            >
+              {videosLoading ? 'Loading…' : videosHasNext ? 'Load more' : 'All videos loaded'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   )

@@ -63,8 +63,8 @@ export const fetchUsers = (token) =>
     token,
   })
 
-export const fetchVideosByCategory = (category, token) =>
-  apiRequest(`/videos/db/${encodeURIComponent(category)}`, {
+export const fetchVideosByCategory = (category, token, page = 1, pageSize = 20) =>
+  apiRequest(`/videos/db/${encodeURIComponent(category)}?page=${page}&page_size=${pageSize}`, {
     token,
   })
 

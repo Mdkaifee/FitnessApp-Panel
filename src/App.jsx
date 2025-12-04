@@ -64,6 +64,8 @@ const getDefaultVideoForm = () => ({
   thumbnailFile: null,
 })
 
+const VIDEO_PAGE_SIZE = 20
+
 function App() {
   const [email, setEmail] = useState(getInitialEmail)
   const [otp, setOtp] = useState('')
@@ -87,6 +89,8 @@ function App() {
   const [videosData, setVideosData] = useState(null)
   const [videosLoading, setVideosLoading] = useState(false)
   const [videosError, setVideosError] = useState(null)
+  const [videoPage, setVideoPage] = useState(1)
+  const [videosHasNext, setVideosHasNext] = useState(false)
   const [videoPending, setVideoPending] = useState('')
   const [videoForm, setVideoForm] = useState(getDefaultVideoForm)
   const [videoModalMode, setVideoModalMode] = useState('create')
@@ -228,14 +232,34 @@ function App() {
   )
 
   const loadVideos = useCallback(
-    async (categoryOverride) => {
+    async (categoryOverride, pageOverride = 1) => {
       if (!token) return
       const targetCategory = categoryOverride ?? videoCategory
+      const targetPage = pageOverride ?? 1
       setVideosLoading(true)
       setVideosError(null)
       try {
-        const response = await fetchVideosByCategory(targetCategory, token)
-        setVideosData(response?.data ?? null)
+        const response = await fetchVideosByCategory(
+          targetCategory,
+          token,
+          targetPage,
+          VIDEO_PAGE_SIZE,
+        )
+        const payload = response?.data ?? {}
+        setVideosData((prev) => {
+          const previousCategory = prev?.category
+          const shouldReset = targetPage === 1 || previousCategory !== targetCategory
+          const previousVideos = shouldReset ? [] : prev?.videos ?? []
+          const mergedVideos = [...previousVideos, ...(payload.videos ?? [])]
+          return {
+            ...payload,
+            category: targetCategory,
+            videos: mergedVideos,
+            count: mergedVideos.length,
+          }
+        })
+        setVideoPage(payload?.page ?? targetPage)
+        setVideosHasNext(Boolean(payload?.has_next))
       } catch (error) {
         setVideosError(error?.message ?? 'Unable to load videos.')
         handleApiError(error)
@@ -312,7 +336,7 @@ function App() {
 
   useEffect(() => {
     if (isLoggedIn && activeView === 'videos') {
-      loadVideos(videoCategory)
+      loadVideos(videoCategory, 1)
     }
   }, [activeView, isLoggedIn, loadVideos, videoCategory])
 
@@ -475,10 +499,15 @@ function App() {
 
   const handleVideoCategoryChange = (value) => {
     setVideoCategory(value)
-    if (isLoggedIn) {
-      loadVideos(value)
-    }
+    setVideoPage(1)
+    setVideosHasNext(false)
   }
+
+  const handleVideosNextPage = useCallback(() => {
+    if (!videosHasNext || videosLoading) return
+    const nextPage = (videoPage ?? 1) + 1
+    loadVideos(videoCategory, nextPage)
+  }, [loadVideos, videoCategory, videoPage, videosHasNext, videosLoading])
 
   const resetVideoForm = () => setVideoForm(getDefaultVideoForm())
 
@@ -531,7 +560,7 @@ function App() {
         const response = await uploadVideo(formData, token)
         setStatus({ type: 'success', text: response?.message ?? 'Video uploaded successfully.' })
         closeVideoModal()
-        loadVideos(videoCategory)
+        loadVideos(videoCategory, 1)
       } catch (error) {
         handleApiError(error)
       } finally {
@@ -570,7 +599,7 @@ function App() {
       const response = await updateVideo(videoForm.videoId, formData, token)
       setStatus({ type: 'success', text: response?.message ?? 'Video updated successfully.' })
       closeVideoModal()
-      loadVideos(videoCategory)
+      loadVideos(videoCategory, 1)
     } catch (error) {
       handleApiError(error)
     } finally {
@@ -584,7 +613,7 @@ function App() {
     try {
       const response = await deleteVideo(videoId, token)
       setStatus({ type: 'success', text: response?.message ?? 'Video removed successfully.' })
-      loadVideos(videoCategory)
+      loadVideos(videoCategory, 1)
     } catch (error) {
       handleApiError(error)
     } finally {
@@ -874,12 +903,14 @@ function App() {
                   videosData={videosData}
                   videosLoading={videosLoading}
                   videosError={videosError}
+                  videosHasNext={videosHasNext}
                   videoCategory={videoCategory}
                   videoPending={videoPending}
                   onCategoryChange={handleVideoCategoryChange}
-                  onRefresh={() => loadVideos(videoCategory)}
+                  onRefresh={() => loadVideos(videoCategory, 1)}
                   onEditVideo={openEditVideoModal}
                   onDeleteVideo={handleDeleteVideo}
+                  onLoadMore={handleVideosNextPage}
                 />
               )}
               {activeView === 'questions' && (

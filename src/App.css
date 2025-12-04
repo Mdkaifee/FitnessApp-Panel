@@ -770,6 +770,26 @@ button.secondary {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
+.videos-footer {
+  margin-top: 24px;
+  padding: 14px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.95rem;
+  color: var(--color-muted);
+}
+
+.videos-footer span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .video-card {
   background: #fff;
   border-radius: 12px;
