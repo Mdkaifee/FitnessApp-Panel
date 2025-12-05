@@ -10,10 +10,10 @@ function Sidebar({ activeView, onViewChange, signedEmail, pendingAction, onLogou
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <div className="brand-icon">FC</div>
-        <div>
-          <p className="brand-title">Fitness Cassie</p>
-          <span>Admin Suite</span>
+        <div className="brand-icon">SS</div>
+        <div className="brand-text">
+          <span className="brand-text-primary">Simple</span>
+          <span className="brand-text-accent">Starts</span>
         </div>
       </div>
       <nav className="sidebar-nav">

@@ -23,7 +23,7 @@ function AuthView({
     <section className="auth-board">
       <div className="auth-board__left">
         <div className="auth-brand">
-          <div className="brand-icon">FC</div>
+          <div className="brand-icon">SS</div>
           <p>Fitness Cassie Admin</p>
         </div>
         <div className="auth-copy">

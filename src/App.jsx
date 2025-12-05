@@ -16,6 +16,7 @@ import {
   deleteQuestion,
   updateUserStatus,
   fetchUserAnalytics,
+  fetchDashboardMetrics,
 } from './services/api'
 import './App.css'
 import {
@@ -97,8 +98,10 @@ function App() {
   const [flowHint, setFlowHint] = useState(null)
   const [token, setToken] = useState(() => getInitialToken())
   const [profile, setProfile] = useState(null)
-  const [profileComplete, setProfileComplete] = useState(false)
   const [profileLoading, setProfileLoading] = useState(false)
+  const [dashboardStats, setDashboardStats] = useState(null)
+  const [dashboardStatsLoading, setDashboardStatsLoading] = useState(false)
+  const [dashboardStatsError, setDashboardStatsError] = useState('')
   const [usersData, setUsersData] = useState(null)
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersPage, setUsersPage] = useState(1)
@@ -196,6 +199,8 @@ function App() {
   const resetSession = useCallback(() => {
     setToken('')
     setProfile(null)
+    setDashboardStats(null)
+    setDashboardStatsError('')
     setUsersData(null)
     setSelectedUser(null)
     setUserAnalytics(null)
@@ -203,7 +208,6 @@ function App() {
     setUserAnalyticsOpen(false)
     setUserAnalyticsLoading(false)
     setActiveView('login')
-    setProfileComplete(false)
     setHasRequestedOtp(false)
     setResendSeconds(0)
     navigateAuthStep('login')
@@ -230,11 +234,25 @@ function App() {
       const response = await fetchProfile(authToken)
       const nextProfile = response?.data ?? null
       setProfile(nextProfile)
-      setProfileComplete(Boolean(nextProfile?.first_name && nextProfile?.last_name))
     } catch (error) {
       handleApiError(error)
     } finally {
       setProfileLoading(false)
+    }
+  }, [handleApiError, token])
+
+  const loadDashboardStats = useCallback(async () => {
+    if (!token) return
+    setDashboardStatsLoading(true)
+    setDashboardStatsError('')
+    try {
+      const response = await fetchDashboardMetrics(token)
+      setDashboardStats(response?.data ?? response ?? null)
+    } catch (error) {
+      setDashboardStatsError(error?.message ?? 'Unable to load dashboard metrics.')
+      handleApiError(error)
+    } finally {
+      setDashboardStatsLoading(false)
     }
   }, [handleApiError, token])
 
@@ -406,8 +424,9 @@ function App() {
   useEffect(() => {
     if (isLoggedIn && activeView === 'dashboard') {
       loadProfile()
+      loadDashboardStats()
     }
-  }, [activeView, isLoggedIn, loadProfile])
+  }, [activeView, isLoggedIn, loadDashboardStats, loadProfile])
 
   useEffect(() => {
     if (isLoggedIn && activeView === 'users') {
@@ -546,7 +565,6 @@ function App() {
       setActiveView('dashboard')
       safeSetInStorage(ACTIVE_VIEW_KEY, 'dashboard')
       setStatus({ type: 'success', text: response?.message ?? 'OTP verified successfully.' })
-      setProfileComplete(Boolean(response?.data?.profile_complete))
       setOtp('')
       await loadProfile(accessToken)
     } catch (error) {
@@ -986,9 +1004,6 @@ function App() {
                 <p>{viewMeta.description}</p>
               </div>
               <div className="topbar-meta">
-                <span className={`profile-pill ${profileComplete ? 'complete' : 'incomplete'}`}>
-                  {profileComplete ? 'Profile complete' : 'Profile incomplete'}
-                </span>
                 {flowHint && <span className="pill neutral">Flow: {flowHint}</span>}
                 {activeView === 'videos' && (
                   <button className="primary" onClick={openCreateVideoModal}>
@@ -1004,7 +1019,15 @@ function App() {
             </header>
             <main className="main-content">
               {activeView === 'dashboard' && (
-                <DashboardView profile={profile} isLoading={profileLoading} onRefresh={loadProfile} />
+                <DashboardView
+                  profile={profile}
+                  isLoading={profileLoading}
+                  onRefresh={loadProfile}
+                  stats={dashboardStats}
+                  statsLoading={dashboardStatsLoading}
+                  statsError={dashboardStatsError}
+                  onRefreshStats={loadDashboardStats}
+                />
               )}
               {activeView === 'users' && (
                 <UsersView

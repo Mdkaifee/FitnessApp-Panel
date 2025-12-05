@@ -55,6 +55,11 @@ export const logoutSession = (token) =>
     token,
   })
 
+export const fetchDashboardMetrics = (token) =>
+  apiRequest('/admin/dashboard/metrics', {
+    token,
+  })
+
 export const fetchProfile = (token) =>
   apiRequest('/profile/me', {
     token,
