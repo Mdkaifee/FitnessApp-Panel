@@ -22,6 +22,7 @@ import './App.css'
 import {
   ACTIVE_VIEW_KEY,
   AUTH_EMAIL_KEY,
+  PUBLIC_VIEWS,
   ROUTE_TO_WORKSPACE_VIEW,
   TOKEN_KEY,
   VIDEO_CATEGORIES,
@@ -44,6 +45,8 @@ import UsersView from './views/UsersView'
 import VideosView from './views/VideosView'
 import QuestionsView from './views/QuestionsView'
 import SubscriptionView from './views/SubscriptionView'
+import PrivacyPolicyView from './views/PrivacyPolicyView'
+import DeleteAccountView from './views/DeleteAccountView'
 import Sidebar from './components/layout/Sidebar'
 import StatusBanner from './components/shared/StatusBanner'
 import VideoModal from './components/modals/VideoModal'
@@ -150,6 +153,7 @@ function App() {
 
   const isLoggedIn = useMemo(() => Boolean(token), [token])
   const trimmedEmail = email.trim().toLowerCase()
+  const isPublicView = PUBLIC_VIEWS.has(activeView)
 
   const viewMeta = useMemo(() => {
     switch (activeView) {
@@ -177,6 +181,16 @@ function App() {
         return {
           title: 'Subscription',
           description: 'Monitor subscription metrics and plan usage.',
+        }
+      case 'privacyPolicy':
+        return {
+          title: 'Privacy Policy',
+          description: 'See how Fitness Cassie collects, stores, and protects member data.',
+        }
+      case 'deleteAccount':
+        return {
+          title: 'Delete Account',
+          description: 'Step-by-step instructions for removing member accounts on request.',
         }
       default:
         return {
@@ -464,13 +478,13 @@ function App() {
   }, [email])
 
   useEffect(() => {
-    if (isLoggedIn) return
+    if (isLoggedIn || isPublicView) return
     if (typeof window === 'undefined') return
     const desiredPath = authStep === 'otp' ? '/verify-otp' : '/'
     if (window.location.pathname !== desiredPath) {
       window.history.replaceState({ authStep }, '', desiredPath)
     }
-  }, [authStep, isLoggedIn])
+  }, [authStep, isLoggedIn, isPublicView])
 
   useEffect(() => {
     if (!isLoggedIn) return
@@ -484,6 +498,18 @@ function App() {
   }, [activeView, isLoggedIn])
 
   useEffect(() => {
+    if (isLoggedIn || !isPublicView) return
+    if (typeof window === 'undefined') return
+    const targetPath =
+      WORKSPACE_VIEW_ROUTES[activeView] ??
+      WORKSPACE_VIEW_ROUTES.privacyPolicy ??
+      '/privacy-policy'
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState({ view: activeView }, '', targetPath)
+    }
+  }, [activeView, isLoggedIn, isPublicView])
+
+  useEffect(() => {
     const handlePopState = () => {
       if (typeof window === 'undefined') return
       const path = window.location.pathname
@@ -493,7 +519,7 @@ function App() {
       }
       const workspaceView = ROUTE_TO_WORKSPACE_VIEW[path]
       if (workspaceView) {
-        if (isLoggedIn) {
+        if (isLoggedIn || PUBLIC_VIEWS.has(workspaceView)) {
           setActiveView(workspaceView)
         } else {
           navigateAuthStep('login')
@@ -969,9 +995,11 @@ function App() {
 
   const signedEmail = profile?.email ?? trimmedEmail
 
+  const shouldShowAuth = !isLoggedIn && !isPublicView
+
   return (
     <div className="app-shell">
-      {!isLoggedIn ? (
+      {shouldShowAuth ? (
         <AuthView
           authStep={authStep}
           email={email}
@@ -989,14 +1017,16 @@ function App() {
           onBackToLogin={handleBackToLoginStep}
         />
       ) : (
-        <section className="workspace">
-          <Sidebar
-            activeView={activeView}
-            onViewChange={setActiveView}
-            signedEmail={signedEmail}
-            pendingAction={pendingAction}
-            onLogout={handleLogout}
-          />
+        <section className={isLoggedIn ? 'workspace' : 'public-view'}>
+          {isLoggedIn && (
+            <Sidebar
+              activeView={activeView}
+              onViewChange={setActiveView}
+              signedEmail={signedEmail}
+              pendingAction={pendingAction}
+              onLogout={handleLogout}
+            />
+          )}
           <div className="content">
             <header className="content-header">
               <div>
@@ -1004,13 +1034,13 @@ function App() {
                 <p>{viewMeta.description}</p>
               </div>
               <div className="topbar-meta">
-                {flowHint && <span className="pill neutral">Flow: {flowHint}</span>}
-                {activeView === 'videos' && (
+                {isLoggedIn && flowHint && <span className="pill neutral">Flow: {flowHint}</span>}
+                {isLoggedIn && activeView === 'videos' && (
                   <button className="primary" onClick={openCreateVideoModal}>
                     Upload Video
                   </button>
                 )}
-                {activeView === 'questions' && (
+                {isLoggedIn && activeView === 'questions' && (
                   <button className="primary" onClick={openCreateQuestionModal}>
                     Add Question
                   </button>
@@ -1073,6 +1103,8 @@ function App() {
                 />
               )}
               {activeView === 'subscription' && <SubscriptionView />}
+              {activeView === 'privacyPolicy' && <PrivacyPolicyView />}
+              {activeView === 'deleteAccount' && <DeleteAccountView />}
             </main>
           </div>
         </section>

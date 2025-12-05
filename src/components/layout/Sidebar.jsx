@@ -4,6 +4,8 @@ const NAV_ITEMS = [
   { id: 'videos', label: 'Videos', icon: '🎬' },
   { id: 'questions', label: 'Questions', icon: '❓' },
   { id: 'subscription', label: 'Subscription', icon: '💳' },
+  { id: 'privacyPolicy', label: 'Privacy Policy', icon: '🛡️' },
+  { id: 'deleteAccount', label: 'Delete Account', icon: '⚠️' },
 ]
 
 function Sidebar({ activeView, onViewChange, signedEmail, pendingAction, onLogout }) {

@@ -1,5 +1,6 @@
 import {
   ACTIVE_VIEW_KEY,
+  PUBLIC_VIEWS,
   ROUTE_TO_WORKSPACE_VIEW,
   TOKEN_KEY,
   WORKSPACE_VIEWS,
@@ -36,13 +37,19 @@ export const getInitialToken = () => safeGetFromStorage(TOKEN_KEY) ?? ''
 
 export const getInitialActiveView = () => {
   const storedToken = safeGetFromStorage(TOKEN_KEY)
-  if (!storedToken) return 'login'
+  const hasToken = Boolean(storedToken)
   if (typeof window !== 'undefined') {
     const pathView = ROUTE_TO_WORKSPACE_VIEW[window.location.pathname]
-    if (pathView && WORKSPACE_VIEWS.has(pathView)) {
-      return pathView
+    if (pathView) {
+      if (hasToken && WORKSPACE_VIEWS.has(pathView)) {
+        return pathView
+      }
+      if (!hasToken && PUBLIC_VIEWS.has(pathView)) {
+        return pathView
+      }
     }
   }
+  if (!hasToken) return 'login'
   const storedView = safeGetFromStorage(ACTIVE_VIEW_KEY)
   return storedView && WORKSPACE_VIEWS.has(storedView) ? storedView : 'dashboard'
 }

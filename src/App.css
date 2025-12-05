@@ -235,6 +235,33 @@ button.secondary {
   background: #ffffff;
 }
 
+.public-view {
+  width: 100%;
+  min-height: 100vh;
+  background: #f8fafc;
+  padding: 32px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.public-view .content {
+  max-width: 960px;
+  width: 100%;
+  background: transparent;
+  padding: 0;
+}
+
+.public-view .content-header {
+  border-radius: 20px;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+}
+
+.public-view .main-content {
+  margin-top: 12px;
+}
+
 .sidebar {
   background: #12183a;
   color: #f8fafc;
@@ -375,6 +402,107 @@ button.secondary {
   border-radius: 14px;
   padding: 20px;
   border: 1px solid var(--color-border);
+}
+.policy-meta,
+.delete-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0 0 20px;
+}
+
+.policy-meta div,
+.delete-meta div {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #f8fafc;
+}
+
+.policy-meta dt,
+.delete-meta dt {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  letter-spacing: 0.05em;
+}
+
+.policy-meta dd,
+.delete-meta dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.policy-grid,
+.delete-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.policy-card,
+.delete-card {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.04);
+}
+
+.policy-card h3,
+.delete-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.policy-card p,
+.delete-card p {
+  margin: 8px 0 12px;
+  color: var(--color-muted);
+}
+
+.policy-card ul,
+.delete-safeguards ul,
+.steps-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text);
+}
+
+.policy-card ul,
+.delete-safeguards ul {
+  list-style: disc;
+}
+
+.steps-list {
+  list-style: decimal;
+}
+
+.delete-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.policy-contact,
+.delete-safeguards {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px;
+  background: #f3f6ff;
+}
+
+.policy-contact a,
+.delete-safeguards a {
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 .placeholder-panel {

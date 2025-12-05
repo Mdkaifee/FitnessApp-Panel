@@ -1,7 +1,17 @@
 export const TOKEN_KEY = 'fitness_admin_access_token'
 export const ACTIVE_VIEW_KEY = 'fitness_admin_active_view'
 export const AUTH_EMAIL_KEY = 'fitness_admin_auth_email'
-export const WORKSPACE_VIEWS = new Set(['dashboard', 'users', 'videos', 'questions', 'subscription'])
+export const WORKSPACE_VIEWS = new Set([
+  'dashboard',
+  'users',
+  'videos',
+  'questions',
+  'subscription',
+  'privacyPolicy',
+  'deleteAccount',
+])
+
+export const PUBLIC_VIEWS = new Set(['privacyPolicy', 'deleteAccount'])
 
 export const WORKSPACE_VIEW_ROUTES = {
   dashboard: '/dashboard',
@@ -9,6 +19,8 @@ export const WORKSPACE_VIEW_ROUTES = {
   videos: '/videos',
   questions: '/questions',
   subscription: '/subscription',
+  privacyPolicy: '/privacy-policy',
+  deleteAccount: '/delete-account',
 }
 
 export const ROUTE_TO_WORKSPACE_VIEW = Object.entries(WORKSPACE_VIEW_ROUTES).reduce(
