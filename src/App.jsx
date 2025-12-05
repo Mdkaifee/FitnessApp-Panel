@@ -15,6 +15,7 @@ import {
   updateQuestion,
   deleteQuestion,
   updateUserStatus,
+  fetchUserAnalytics,
 } from './services/api'
 import './App.css'
 import {
@@ -46,6 +47,7 @@ import Sidebar from './components/layout/Sidebar'
 import StatusBanner from './components/shared/StatusBanner'
 import VideoModal from './components/modals/VideoModal'
 import QuestionModal from './components/modals/QuestionModal'
+import UserAnalyticsModal from './components/modals/UserAnalyticsModal'
 
 const getInitialEmail = () => safeGetFromStorage(AUTH_EMAIL_KEY) ?? ''
 
@@ -66,6 +68,28 @@ const getDefaultVideoForm = () => ({
 
 const VIDEO_PAGE_SIZE = 20
 
+const formatAnalyticsRangeLabel = (range) => {
+  if (!range) return 'last 7 days'
+  if (typeof range === 'string') return range
+  const { start, end } = range
+  if (!start || !end) return 'last 7 days'
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const formatDate = (value, fallback) => {
+    if (!value) return fallback ?? '—'
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return value
+    return parsed.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
+  const startLabel = formatDate(start, start)
+  const endLabel = formatDate(end, end)
+  return `${startLabel} → ${endLabel}`
+}
+
 function App() {
   const [email, setEmail] = useState(getInitialEmail)
   const [otp, setOtp] = useState('')
@@ -80,6 +104,11 @@ function App() {
   const [usersPage, setUsersPage] = useState(1)
   const [usersHasNext, setUsersHasNext] = useState(false)
   const [userStatusPending, setUserStatusPending] = useState('')
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [userAnalytics, setUserAnalytics] = useState(null)
+  const [userAnalyticsLoading, setUserAnalyticsLoading] = useState(false)
+  const [userAnalyticsError, setUserAnalyticsError] = useState('')
+  const [isUserAnalyticsOpen, setUserAnalyticsOpen] = useState(false)
   const [activeView, setActiveView] = useState(() => getInitialActiveView())
   const [status, setStatus] = useState(null)
   const [pendingAction, setPendingAction] = useState('')
@@ -168,6 +197,11 @@ function App() {
     setToken('')
     setProfile(null)
     setUsersData(null)
+    setSelectedUser(null)
+    setUserAnalytics(null)
+    setUserAnalyticsError('')
+    setUserAnalyticsOpen(false)
+    setUserAnalyticsLoading(false)
     setActiveView('login')
     setProfileComplete(false)
     setHasRequestedOtp(false)
@@ -211,14 +245,11 @@ function App() {
       try {
         const response = await fetchUsersPaginated({ page, pageSize }, token)
         const payload = response?.data ?? {}
-        setUsersData((prev) => {
-          const previousUsers = page === 1 ? [] : prev?.users ?? []
-          const mergedUsers = [...previousUsers, ...(payload.users ?? [])]
-          return {
-            ...payload,
-            users: mergedUsers,
-            displayed_count: mergedUsers.length,
-          }
+        const normalizedUsers = payload.users ?? []
+        setUsersData({
+          ...payload,
+          users: normalizedUsers,
+          displayed_count: normalizedUsers.length,
         })
         setUsersPage(payload.page ?? page)
         setUsersHasNext(Boolean(payload.has_next))
@@ -226,6 +257,56 @@ function App() {
         handleApiError(error)
       } finally {
         setUsersLoading(false)
+      }
+    },
+    [handleApiError, token],
+  )
+
+  const loadUserAnalytics = useCallback(
+    async (userId, days = 7) => {
+      if (!token || !userId) return
+      setUserAnalyticsLoading(true)
+      setUserAnalyticsError('')
+      try {
+        const response = await fetchUserAnalytics(userId, days, token)
+        const payload = response?.data ?? response ?? null
+        const analyticsPayload = payload?.analytics ?? payload ?? {}
+        const rawEntries = Array.isArray(analyticsPayload?.entries)
+          ? analyticsPayload.entries
+          : []
+        const sortedEntries = [...rawEntries].sort((a, b) => {
+          const dateA = new Date(a?.date ?? 0)
+          const dateB = new Date(b?.date ?? 0)
+          return dateB - dateA
+        })
+        const nextRange = analyticsPayload?.range ?? payload?.range ?? null
+        const rangeLabel =
+          analyticsPayload?.range_label ??
+          analyticsPayload?.rangeLabel ??
+          payload?.range_label ??
+          formatAnalyticsRangeLabel(nextRange)
+        setUserAnalytics(
+          payload
+            ? {
+                user: payload?.user ?? null,
+                user_id: payload?.user?.id ?? payload?.user_id ?? userId,
+                range: nextRange,
+                rangeLabel,
+                entries: sortedEntries,
+              }
+            : null,
+        )
+      } catch (error) {
+        console.error('Failed to load user analytics', {
+          userId,
+          days,
+          message: error?.message,
+          status: error?.status,
+        })
+        setUserAnalyticsError(error?.message ?? 'Unable to load analytics.')
+        handleApiError(error)
+      } finally {
+        setUserAnalyticsLoading(false)
       }
     },
     [handleApiError, token],
@@ -795,6 +876,45 @@ function App() {
     loadUsers((usersPage ?? 1) + 1)
   }, [loadUsers, usersHasNext, usersLoading, usersPage])
 
+  const handleUsersPrevPage = useCallback(() => {
+    if (usersLoading) return
+    const currentPage = usersPage ?? 1
+    if (currentPage <= 1) return
+    loadUsers(currentPage - 1)
+  }, [loadUsers, usersLoading, usersPage])
+
+  const handleUserNameClick = useCallback((user) => {
+    if (!user) return
+    const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
+    const label = fullName || user.email || user.phone || String(user.id ?? '')
+    console.info('User name clicked. Analytics are available via the email column.', {
+      id: user.id,
+      label,
+    })
+  }, [])
+
+  const handleUserAnalyticsOpen = useCallback(
+    (user) => {
+      if (!user?.id) return
+      const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
+      const label = fullName || user.email || user.phone || String(user.id ?? '')
+      console.info('User email clicked. Loading analytics…', { id: user.id, label })
+      setSelectedUser(user)
+      setUserAnalytics(null)
+      setUserAnalyticsError('')
+      setUserAnalyticsOpen(true)
+      loadUserAnalytics(user.id)
+    },
+    [loadUserAnalytics],
+  )
+
+  const handleUserAnalyticsClose = useCallback(() => {
+    setUserAnalyticsOpen(false)
+    setSelectedUser(null)
+    setUserAnalytics(null)
+    setUserAnalyticsError('')
+  }, [])
+
   const handleUserStatusChange = async (userId, nextActive) => {
     if (!userId || !token) return
     setUserStatusPending(String(userId))
@@ -896,6 +1016,9 @@ function App() {
                   page={usersPage}
                   onToggleStatus={handleUserStatusChange}
                   statusPending={userStatusPending}
+                  onViewAnalytics={handleUserAnalyticsOpen}
+                  onUserNameClick={handleUserNameClick}
+                  onPrevPage={handleUsersPrevPage}
                 />
               )}
               {activeView === 'videos' && (
@@ -954,6 +1077,15 @@ function App() {
         removeOptionField={removeOptionField}
         updateOptionField={updateOptionField}
         toggleOptionActive={toggleOptionActive}
+      />
+      <UserAnalyticsModal
+        open={isUserAnalyticsOpen}
+        user={selectedUser}
+        data={userAnalytics}
+        isLoading={userAnalyticsLoading}
+        error={userAnalyticsError}
+        onClose={handleUserAnalyticsClose}
+        onRefresh={() => (selectedUser?.id ? loadUserAnalytics(selectedUser.id) : null)}
       />
     </div>
   )

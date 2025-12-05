@@ -15,7 +15,7 @@ const proxyConfig = API_PROXY_PATHS.reduce((acc, path) => {
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ['8349d619bf22.ngrok-free.app', '9fb9cd6d31d0.ngrok-free.app'],
+    allowedHosts: ['89371708975.ngrok-free.app,localhost'],
     proxy: proxyConfig,
   },
 })

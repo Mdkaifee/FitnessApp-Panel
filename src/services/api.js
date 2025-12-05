@@ -139,3 +139,10 @@ export const updateUserStatus = (userId, isActive, token) =>
     method: 'PUT',
     token,
   })
+
+export const fetchUserAnalytics = (userId, days = 7, token) => {
+  const params = new URLSearchParams()
+  params.append('user_id', String(userId))
+  params.append('days', String(days))
+  return apiRequest(`/admin/users/analytics?${params.toString()}`, { token })
+}

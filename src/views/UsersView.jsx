@@ -9,6 +9,9 @@ function UsersView({
   page,
   onToggleStatus,
   statusPending,
+  onViewAnalytics,
+  onUserNameClick,
+  onPrevPage,
 }) {
   if (isLoading) {
     return (
@@ -65,8 +68,32 @@ function UsersView({
                 return (
                   <tr key={user.id}>
                     <td>{index + 1}</td>
-                    <td>{fullName}</td>
-                    <td>{user.email ?? '—'}</td>
+                    <td>
+                      {onUserNameClick ? (
+                        <button
+                          type="button"
+                          className="user-name-button"
+                          onClick={() => onUserNameClick(user)}
+                        >
+                          {fullName}
+                        </button>
+                      ) : (
+                        fullName
+                      )}
+                    </td>
+                    <td>
+                      {user.email ? (
+                        <button
+                          type="button"
+                          className="user-email-button"
+                          onClick={() => onViewAnalytics?.(user)}
+                        >
+                          {user.email}
+                        </button>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td>{user.phone ?? '—'}</td>
                     <td>{user.dob ?? '—'}</td>
                     <td>{user.gender ?? '—'}</td>
@@ -108,9 +135,18 @@ function UsersView({
               Page {usersData?.page ?? page} · Showing {usersData?.count ?? list.length} of{' '}
               {usersData?.total ?? '—'}
             </div>
-            <button className="link-button" disabled={!hasNext || isLoading} onClick={onNextPage}>
-              {isLoading ? 'Loading…' : hasNext ? 'Load more' : 'No more results'}
-            </button>
+            <div className="table-footer__actions">
+              <button
+                className="link-button"
+                disabled={isLoading || (usersData?.page ?? page) <= 1}
+                onClick={onPrevPage}
+              >
+                Previous
+              </button>
+              <button className="link-button" disabled={!hasNext || isLoading} onClick={onNextPage}>
+                {isLoading ? 'Loading…' : hasNext ? 'Next page' : 'No more results'}
+              </button>
+            </div>
           </div>
         </div>
       )}
