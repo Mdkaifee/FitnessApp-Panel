@@ -12,7 +12,8 @@ const normalizedEnv = envBase ? normalizeUrl(envBase) : ''
 const envPointsToLocal =
   normalizedEnv && /^https?:\/\/(localhost|127\.0\.0\.1|::1)(:\d+)?(\/.*)?$/i.test(normalizedEnv)
 
-const FALLBACK_LOCAL_API = 'http://localhost:8000'
+// const FALLBACK_LOCAL_API = 'http://localhost:8000'
+const FALLBACK_LOCAL_API = 'https://dev-api.glowante.com'
 
 export const getApiBaseUrl = () => {
   if (normalizedEnv) {
