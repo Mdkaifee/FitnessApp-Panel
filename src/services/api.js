@@ -151,3 +151,36 @@ export const fetchUserAnalytics = (userId, days = 7, token) => {
   params.append('days', String(days))
   return apiRequest(`/admin/users/analytics?${params.toString()}`, { token })
 }
+
+export const fetchSubscriptionPlans = ({ includeInactive = false, status = '' } = {}, token) => {
+  const params = new URLSearchParams()
+  if (status) {
+    params.append('status', status)
+  }
+  if (includeInactive) {
+    params.append('include_inactive', 'true')
+  }
+  const query = params.toString()
+  const suffix = query ? `?${query}` : ''
+  return apiRequest(`/plans/admin${suffix}`, { token })
+}
+
+export const createSubscriptionPlan = (payload, token) =>
+  apiRequest('/plans/admin', {
+    method: 'POST',
+    body: payload,
+    token,
+  })
+
+export const updateSubscriptionPlan = (planId, payload, token) =>
+  apiRequest(`/plans/admin/${planId}`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
+export const deleteSubscriptionPlan = (planId, token) =>
+  apiRequest(`/plans/admin/${planId}`, {
+    method: 'DELETE',
+    token,
+  })

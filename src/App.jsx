@@ -17,6 +17,10 @@ import {
   updateUserStatus,
   fetchUserAnalytics,
   fetchDashboardMetrics,
+  fetchSubscriptionPlans,
+  createSubscriptionPlan,
+  updateSubscriptionPlan,
+  deleteSubscriptionPlan,
 } from './services/api'
 import './App.css'
 import {
@@ -52,6 +56,7 @@ import StatusBanner from './components/shared/StatusBanner'
 import VideoModal from './components/modals/VideoModal'
 import QuestionModal from './components/modals/QuestionModal'
 import UserAnalyticsModal from './components/modals/UserAnalyticsModal'
+import PlanModal from './components/modals/PlanModal'
 
 const getInitialEmail = () => safeGetFromStorage(AUTH_EMAIL_KEY) ?? ''
 
@@ -68,6 +73,49 @@ const getDefaultVideoForm = () => ({
   description: '',
   videoFile: null,
   thumbnailFile: null,
+})
+
+const getDefaultPlanForm = () => ({
+  id: '',
+  durationMonths: '12',
+  originalPrice: '',
+  discountedPrice: '',
+  isActive: true,
+})
+
+const parseCurrencyValue = (value) => {
+  const parsed = parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const parseIntValue = (value) => {
+  const parsed = parseInt(value, 10)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const buildPlanPayload = (form) => ({
+  duration_months: parseIntValue(form.durationMonths),
+  original_price: parseCurrencyValue(form.originalPrice),
+  discounted_price: parseCurrencyValue(form.discountedPrice),
+  is_active: Boolean(form.isActive),
+})
+
+const buildPlanPayloadFromRecord = (plan, overrides = {}) => ({
+  duration_months: parseIntValue(
+    overrides.durationMonths ?? overrides.duration_months ?? plan?.duration_months ?? plan?.durationMonths ?? 0,
+  ),
+  original_price: parseCurrencyValue(
+    overrides.originalPrice ?? overrides.original_price ?? plan?.original_price ?? plan?.originalPrice ?? 0,
+  ),
+  discounted_price: parseCurrencyValue(
+    overrides.discountedPrice ?? overrides.discounted_price ?? plan?.discounted_price ?? plan?.discountedPrice ?? 0,
+  ),
+  is_active:
+    typeof overrides.isActive === 'boolean'
+      ? overrides.isActive
+      : typeof overrides.is_active === 'boolean'
+        ? overrides.is_active
+        : Boolean(plan?.is_active ?? plan?.isActive ?? true),
 })
 
 const VIDEO_PAGE_SIZE = 20
@@ -150,6 +198,14 @@ function App() {
     options: [{ id: '', optionText: '', value: '', isActive: true }],
   })
   const [isQuestionModalOpen, setQuestionModalOpen] = useState(false)
+  const [plans, setPlans] = useState([])
+  const [plansLoading, setPlansLoading] = useState(false)
+  const [plansError, setPlansError] = useState('')
+  const [planStatusFilter, setPlanStatusFilter] = useState('active')
+  const [planPending, setPlanPending] = useState('')
+  const [planModalMode, setPlanModalMode] = useState('create')
+  const [isPlanModalOpen, setPlanModalOpen] = useState(false)
+  const [planForm, setPlanForm] = useState(getDefaultPlanForm)
 
   const isLoggedIn = useMemo(() => Boolean(token), [token])
   const trimmedEmail = email.trim().toLowerCase()
@@ -398,6 +454,151 @@ function App() {
     }
   }, [handleApiError, questionsFilter, token])
 
+  const loadPlans = useCallback(
+    async (options = {}) => {
+      if (!token) return
+      setPlansLoading(true)
+      setPlansError('')
+      const targetStatus = options.status ?? planStatusFilter ?? 'active'
+      const shouldIncludeInactive =
+        typeof options.includeInactive === 'boolean'
+          ? options.includeInactive
+          : targetStatus === 'inactive' || targetStatus === 'all'
+      try {
+        const response = await fetchSubscriptionPlans(
+          { includeInactive: shouldIncludeInactive, status: targetStatus },
+          token,
+        )
+        const payload = response?.data ?? response ?? []
+        const normalizedPlans = Array.isArray(payload) ? payload : payload?.plans ?? []
+        setPlans(normalizedPlans ?? [])
+      } catch (error) {
+        setPlansError(error?.message ?? 'Unable to load subscription plans.')
+        handleApiError(error)
+      } finally {
+        setPlansLoading(false)
+      }
+    },
+    [handleApiError, planStatusFilter, token],
+  )
+
+  const handlePlanStatusFilterChange = useCallback((nextFilter) => {
+    setPlanStatusFilter((prev) => (prev === nextFilter ? prev : nextFilter))
+  }, [])
+
+  const openCreatePlanModal = useCallback(() => {
+    setPlanModalMode('create')
+    setPlanForm(getDefaultPlanForm())
+    setPlanModalOpen(true)
+  }, [])
+
+  const openEditPlanModal = useCallback((plan) => {
+    if (!plan) return
+    setPlanModalMode('edit')
+    setPlanForm({
+      id: plan.id ?? '',
+      durationMonths:
+        typeof plan.duration_months === 'number'
+          ? String(plan.duration_months)
+          : String(plan.durationMonths ?? ''),
+      originalPrice: String(
+        plan.original_price ?? plan.originalPrice ?? plan.price ?? '',
+      ),
+      discountedPrice: String(
+        plan.discounted_price ?? plan.discountedPrice ?? '',
+      ),
+      isActive:
+        typeof plan.is_active === 'boolean' ? plan.is_active : plan.isActive ?? true,
+    })
+    setPlanModalOpen(true)
+  }, [])
+
+  const closePlanModal = useCallback(() => {
+    setPlanModalOpen(false)
+  }, [])
+
+  const handlePlanModalSubmit = useCallback(async () => {
+    if (!token) return
+    const payload = buildPlanPayload(planForm)
+    const mode = planModalMode
+    if (mode === 'edit' && !planForm.id) return
+    setPlanPending(mode)
+    try {
+      const response =
+        mode === 'edit'
+          ? await updateSubscriptionPlan(planForm.id, payload, token)
+          : await createSubscriptionPlan(payload, token)
+      setStatus({
+        type: 'success',
+        text:
+          response?.message ??
+          (mode === 'edit' ? 'Plan updated successfully.' : 'Plan created successfully.'),
+      })
+      setPlanModalOpen(false)
+      setPlanForm(getDefaultPlanForm())
+      loadPlans()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setPlanPending('')
+    }
+  }, [handleApiError, loadPlans, planForm, planModalMode, token])
+
+  const handleDeletePlan = useCallback(
+    async (planId) => {
+      if (!token || !planId) return
+      setPlanPending(`delete-${planId}`)
+      try {
+        const response = await deleteSubscriptionPlan(planId, token)
+        setStatus({
+          type: 'success',
+          text: response?.message ?? 'Plan deleted successfully.',
+        })
+        setPlans((prev) => prev.filter((plan) => plan.id !== planId))
+      } catch (error) {
+        handleApiError(error)
+      } finally {
+        setPlanPending('')
+      }
+    },
+    [handleApiError, token],
+  )
+
+  const handleTogglePlanActive = useCallback(
+    async (plan) => {
+      if (!token || !plan?.id) return
+      const planId = plan.id
+      const currentActive = plan?.is_active ?? plan?.isActive ?? true
+      const nextActive = !currentActive
+      const payload = buildPlanPayloadFromRecord(plan, { isActive: nextActive })
+      setPlanPending(`toggle-${planId}`)
+      try {
+        const response = await updateSubscriptionPlan(planId, payload, token)
+        const updatedPlan = response?.data ?? response ?? null
+        setPlans((prev) =>
+          prev.map((item) =>
+            item.id === planId
+              ? {
+                  ...item,
+                  ...(updatedPlan ?? {}),
+                  is_active: nextActive,
+                }
+              : item,
+          ),
+        )
+        setStatus({
+          type: 'success',
+          text: response?.message ?? (nextActive ? 'Plan activated.' : 'Plan hidden.'),
+        })
+      } catch (error) {
+        handleApiError(error)
+      } finally {
+        setPlanPending('')
+      }
+    },
+    [handleApiError, token],
+  )
+
   useEffect(() => {
     if (token) {
       safeSetInStorage(TOKEN_KEY, token)
@@ -459,6 +660,12 @@ function App() {
       loadQuestions()
     }
   }, [activeView, isLoggedIn, loadQuestions])
+
+  useEffect(() => {
+    if (isLoggedIn && activeView === 'subscription') {
+      loadPlans()
+    }
+  }, [activeView, isLoggedIn, loadPlans])
 
   useEffect(() => {
     if (resendSeconds <= 0) return undefined
@@ -1102,7 +1309,21 @@ function App() {
                   onEditQuestion={handleEditQuestion}
                 />
               )}
-              {activeView === 'subscription' && <SubscriptionView />}
+              {activeView === 'subscription' && (
+                <SubscriptionView
+                  plans={plans}
+                  isLoading={plansLoading}
+                  error={plansError}
+                  onRefresh={loadPlans}
+                  onAddPlan={openCreatePlanModal}
+                  onEditPlan={openEditPlanModal}
+                  onDeletePlan={handleDeletePlan}
+                  onTogglePlanActive={handleTogglePlanActive}
+                  pendingAction={planPending}
+                  statusFilter={planStatusFilter}
+                  onStatusFilterChange={handlePlanStatusFilterChange}
+                />
+              )}
               {activeView === 'privacyPolicy' && <PrivacyPolicyView />}
               {activeView === 'deleteAccount' && <DeleteAccountView />}
             </main>
@@ -1132,6 +1353,15 @@ function App() {
         removeOptionField={removeOptionField}
         updateOptionField={updateOptionField}
         toggleOptionActive={toggleOptionActive}
+      />
+      <PlanModal
+        open={isPlanModalOpen}
+        mode={planModalMode}
+        form={planForm}
+        setForm={setPlanForm}
+        pendingAction={planPending === 'create' || planPending === 'edit' ? planPending : ''}
+        onClose={closePlanModal}
+        onSubmit={handlePlanModalSubmit}
       />
       <UserAnalyticsModal
         open={isUserAnalyticsOpen}
