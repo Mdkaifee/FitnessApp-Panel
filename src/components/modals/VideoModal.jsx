@@ -21,11 +21,17 @@ function VideoModal({
   }
 
   return (
-    <Modal
-      open={open}
-      title={mode === 'create' ? 'Upload new video' : 'Update video'}
-      onClose={onClose}
-    >
+    // <Modal
+    //   open={open}
+    //   title={mode === 'create' ? 'Upload new video' : 'Update video'}
+    //   onClose={onClose}
+    // >
+    <Modal open={open} onClose={onClose}>
+  <div className="video-modal-header">
+    <h2>Upload New Video</h2>
+    <button className="video-modal-close" onClick={onClose}>✕</button>
+  </div>
+
       <form onSubmit={handleSubmit} className="modal-form">
         <section className="modal-section">
           <header>

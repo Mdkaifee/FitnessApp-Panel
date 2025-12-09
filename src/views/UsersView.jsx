@@ -99,18 +99,22 @@ function UsersView({
                     <td>{user.gender ?? '—'}</td>
                     <td>
                       <span className={`pill ${user.is_active ? 'success' : 'danger'}`}>
+                      <span className="status-dot"></span>
                         {user.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td>
-                      {user.photo ? (
-                        <a href={buildMediaUrl(user.photo)} target="_blank" rel="noreferrer">
-                          View photo
-                        </a>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
+  {user.photo ? (
+    <img
+      src={buildMediaUrl(user.photo)}
+      className="user-avatar"
+      alt="User"
+    />
+  ) : (
+    '—'
+  )}
+</td>
+
                     <td>
                       <button
                         type="button"

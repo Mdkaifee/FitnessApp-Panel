@@ -158,7 +158,7 @@ button {
   transition: transform 0.15s, box-shadow 0.2s, background-color 0.2s;
   background: linear-gradient(120deg, var(--color-primary), var(--color-primary-dark));
   color: #ffffff;
-  box-shadow: 0 18px 32px rgba(47, 111, 236, 0.35);
+  box-shadow: none;
 }
 
 button:disabled {
@@ -261,7 +261,7 @@ button.secondary {
 .public-view .main-content {
   margin-top: 12px;
 }
-
+/* 
 .sidebar {
   background: #12183a;
   color: #f8fafc;
@@ -269,24 +269,23 @@ button.secondary {
   display: flex;
   flex-direction: column;
   gap: 24px;
+} */
+
+.sidebar {
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  padding: 30px 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
 }
 
 .sidebar-brand {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 4px;
-  font-size: 1.1rem;
-  line-height: 1.1;
 }
-
 .brand-text-primary {
   font-weight: 700;
   color: #fff;
@@ -297,13 +296,101 @@ button.secondary {
   color: #b14984;
 }
 
+.sidebar-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.sidebar-title span {
+  color: #e6527a; /* pink accent */
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-.sidebar-nav button {
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #ffffff;
+   box-shadow: none !important;
+  border: 1px solid #f3f4f6;
+  color: #374151;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.sidebar-item .icon {
+  font-size: 20px;
+  opacity: 0.8;
+}
+
+.sidebar-item:hover {
+  background: #fef2f5;
+}
+.sidebar-item.active {
+  background: #e6527a !important;     /* dark pink background */
+  color: #ffffff !important;           /* white text */
+  border-color: #e6527a !important;
+}
+
+/* Logout button same as active item */
+/* Force logout button to match active sidebar style */
+.logout-button {
+  background: #e6527a !important;     /* dark pink */
+  color: #ffffff !important;           /* white text */
+  border: 1px solid #e6527a !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  width: 100%;
+  margin-top: auto;                     /* pushes to bottom */
+}
+
+/* Make logout icon white */
+.logout-button .nav-icon-img {
+  filter: brightness(0) invert(1) !important;
+}
+
+/* Optional: Hover effect */
+.logout-button:hover {
+  background: #d9416d !important;      /* deeper pink */
+}
+
+
+/* Default icon */
+.nav-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  transition: 0.25s ease;
+}
+
+/* When sidebar item is active → make icon white */
+/* Make icon white when active */
+.sidebar-item.active .nav-icon-img {
+  filter: brightness(0) invert(1);
+}
+
+/* Make text white when active */
+.sidebar-item.active span {
+  color: #ffffff !important;
+}
+
+
+/* .sidebar-nav button {
   background: transparent;
   border: none;
   color: rgba(248, 250, 252, 0.75);
@@ -312,7 +399,7 @@ button.secondary {
   gap: 10px;
   padding: 12px;
   border-radius: 10px;
-}
+} */
 
 .sidebar-nav button .nav-icon {
   width: 24px;
@@ -324,10 +411,10 @@ button.secondary {
   opacity: 1;
 }
 
-.sidebar-nav button.active {
+/* .sidebar-nav button.active {
   background: var(--color-primary);
   color: #ffffff;
-}
+} */
 
 .sidebar-section {
   display: flex;
@@ -350,12 +437,6 @@ button.secondary {
   max-width: 180px;
 }
 
-.sidebar button.secondary {
-  width: 100%;
-  background: transparent;
-  color: #f8fafc;
-  border-color: rgba(255, 255, 255, 0.25);
-}
 
 .content {
   padding: 32px 36px;
@@ -363,6 +444,12 @@ button.secondary {
   flex-direction: column;
   gap: 24px;
   background: #ffffff;
+}
+.sidebar-divider {
+  width: 100%;
+  height: 1px;
+  background: #e5e7eb; /* light gray line */
+  margin: -10px 0 10px 0; 
 }
 
 .content-header {
@@ -1813,17 +1900,53 @@ button.secondary {
 .status-pill {
   display: inline-flex;
   align-items: center;
+  gap: 10px; /* spacing between dot and text */
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.25);
-  color: #475569;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 13px;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+/* NEW Status Pill (with bullet + spacing) */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;    /* space between dot and text */
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
 }
 
-.status-pill--active {
-  background: rgba(var(--color-success-rgb), 0.15);
-  color: var(--color-success);
+/* Bullet dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Active (Green) */
+.pill.success {
+  background: #e7f7ed;
+  color: #1a8f3a;
+}
+
+.pill.success .status-dot {
+  background: #1a8f3a;
+}
+
+/* Inactive (Red) */
+.pill.danger {
+  background: #fde2ea;
+  color: #d64567;
+}
+
+.pill.danger .status-dot {
+  background: #d64567;
 }
 
 .plan-toggle-control {
@@ -2204,16 +2327,16 @@ button.primary.slim {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
+  /* .sidebar {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 12px;
-  }
+  } */
 
-  .sidebar-nav {
+  /* .sidebar-nav {
     flex: 1;
     flex-direction: row;
-  }
+  } */
 
   .sidebar-nav button {
     flex: 1;
@@ -2296,20 +2419,52 @@ button.primary.slim {
   background: #fff;
 }
 
-.data-table th,
 .data-table td {
-  padding: 14px 18px;
-  text-align: left;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-  word-break: break-word;
+  padding: 18px 16px;
+  font-size: 15px;
 }
 
 .data-table th {
-  background: #f8fafc;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-muted);
+  background: #f9fafb;
+  padding: 16px;
+  font-size: 13px;
+}
+
+
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* RESET native button styles ONLY for link-button */
+.link-button {
+  all: unset !important;
+  display: inline-block !important;
+  padding: 10px 16px !important;
+  background: #ffe4ea !important;
+  color: #c53050 !important;
+  border-radius: 5px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  line-height: normal !important;
+  box-shadow: none !important;
+}
+.link-button:disabled {
+  background: #f3f4f6 !important;  /* light grey */
+  color: #9ca3af !important;       /* muted grey text */
+  cursor: not-allowed !important;  
+  box-shadow: none !important;
+  opacity: 0.6 !important;
+}
+
+/* Hover */
+.link-button:hover {
+  background: #ffd3dd !important;
 }
 
 .data-table tbody tr:hover {

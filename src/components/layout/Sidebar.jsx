@@ -1,43 +1,41 @@
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-  { id: 'users', label: 'Users', icon: '👥' },
-  { id: 'videos', label: 'Videos', icon: '🎬' },
-  { id: 'questions', label: 'Questions', icon: '❓' },
-  { id: 'subscription', label: 'Subscription', icon: '💳' },
+  { id: 'dashboard', label: 'Dashboard', icon: '/home.png' },
+  { id: 'users', label: 'Users', icon: '/user.png' },
+  { id: 'videos', label: 'Videos', icon: '/video.png' },
+  { id: 'questions', label: 'Questions', icon: '/question.png' },
+  { id: 'subscription', label: 'Subscription', icon: '/plan.png' },
 ]
+
 
 function Sidebar({ activeView, onViewChange, signedEmail, pendingAction, onLogout }) {
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand">
-        <div className="brand-icon">SS</div>
-        <div className="brand-text">
-          <span className="brand-text-primary">Simple</span>
-          <span className="brand-text-accent">Starts</span>
-        </div>
-      </div>
-      <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            className={activeView === item.id ? 'active' : ''}
-            onClick={() => onViewChange(item.id)}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
-      <div className="sidebar-section">
-        <p className="sidebar-label">Signed in as</p>
-        <p className="sidebar-email">{signedEmail}</p>
-      </div>
-      <div className="sidebar-footer">
-        <button className="secondary" onClick={onLogout} disabled={pendingAction === 'logout'}>
-          {pendingAction === 'logout' ? 'Logging out...' : 'Logout'}
-        </button>
-      </div>
-    </aside>
+  <div className="sidebar-brand">
+    <img src="/splash text.png" className="sidebar-logo" />
+    {/* <h2 className="sidebar-title">SIMPLE <span>STARTS</span></h2> */}
+  </div>
+  <div className="sidebar-divider"></div>  {/* Divider line */}
+ <nav className="sidebar-nav">
+  {NAV_ITEMS.map((item) => (
+    <button
+      key={item.id}
+      className={`sidebar-item ${activeView === item.id ? 'active' : ''}`}
+      onClick={() => onViewChange(item.id)}
+    >
+      <img src={item.icon} className="nav-icon-img" alt={item.label} />
+      <span>{item.label}</span>
+    </button>
+  ))}
+</nav>
+
+
+ <button className="logout-button" onClick={onLogout}>
+  <img src="/logout.png" className="nav-icon-img" alt="logout" />
+  Log Out
+</button>
+
+</aside>
+
   )
 }
 
