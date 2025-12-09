@@ -18,6 +18,7 @@ function AuthView({
 }) {
   const otpInputRef = useRef(null)
   const otpDigits = Array.from({ length: 6 }, (_, index) => otp[index] ?? '')
+  const cursorPosition = Math.min(otp.length, 5) // Ensure cursor stays within visible boxes
 
   return (
     <section className="auth-board">
@@ -59,8 +60,8 @@ function AuthView({
             <div className="otp-box-wrapper" onClick={() => otpInputRef.current?.focus()}>
               <div className="otp-boxes">
                 {otpDigits.map((digit, index) => (
-                  <span key={index} className={`otp-box ${digit ? 'filled' : ''}`}>
-                    {digit || ''}
+                  <span key={index} className={`otp-box ${digit ? 'filled' : ''} ${index === cursorPosition ? 'cursor' : ''}`}>
+                    {digit || (index === cursorPosition ? '|' : '')}
                   </span>
                 ))}
               </div>

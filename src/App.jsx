@@ -1241,7 +1241,7 @@ function App() {
                 <p>{viewMeta.description}</p>
               </div>
               <div className="topbar-meta">
-                {isLoggedIn && flowHint && <span className="pill neutral">Flow: {flowHint}</span>}
+                {/* {isLoggedIn && flowHint && <span className="pill neutral">Flow: {flowHint}</span>} */}
                 {isLoggedIn && activeView === 'videos' && (
                   <button className="primary" onClick={openCreateVideoModal}>
                     Upload Video
