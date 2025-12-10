@@ -1237,6 +1237,39 @@ button.secondary {
 .chart-wrapper.tall-chart {
   min-height: 320px;
 }
+.category-gender-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.category-gender-chart__canvas {
+  flex: 1;
+  min-height: 220px;
+}
+
+.category-gender-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.category-gender-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.category-gender-legend__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+}
 
 .doughnut-wrapper {
   max-width: 280px;
