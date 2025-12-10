@@ -2518,6 +2518,7 @@ button.secondary {
   border-color: rgba(220, 38, 38, 0.4);
   color: var(--color-danger);
   background: rgba(254, 226, 226, 0.5);
+  box-shadow: none;
 }
 
 .plan-action:disabled {
@@ -2761,6 +2762,190 @@ button.primary.slim {
   margin: 0;
   color: #64748b;
   font-size: 0.9rem;
+}
+
+.plan-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.plan-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plan-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plan-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ec4899;
+  text-transform: none;
+}
+
+.plan-section-description {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.plan-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.plan-field {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.plan-field span {
+  color: #0f172a;
+}
+
+.plan-field input,
+.plan-field select {
+  border-radius: 12px;
+  border: 1px solid rgba(236, 72, 153, 0.35);
+  background: #fff;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  margin-top: 6px;
+  color: #0f172a;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.plan-field input:focus,
+.plan-field select:focus {
+  outline: none;
+  border-color: #ec4899;
+  box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.12);
+}
+
+.plan-field select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #94a3b8 50%),
+    linear-gradient(135deg, #94a3b8 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 10px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 32px;
+}
+
+.plan-field small {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.plan-field--full {
+  grid-column: span 2;
+}
+
+@media (max-width: 640px) {
+  .plan-field--full {
+    grid-column: span 1;
+  }
+}
+
+.plan-divider {
+  width: 100%;
+  height: 1px;
+  background: #f1f5f9;
+}
+
+.plan-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.plan-preview-card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+  border-right: 1px solid #f1f5f9;
+}
+
+.plan-preview-card:last-child {
+  border-right: none;
+}
+
+.plan-preview-card span {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.plan-preview-card strong {
+  font-size: 1.15rem;
+  color: #0f172a;
+}
+
+.plan-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.plan-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #ec4899;
+}
+
+.plan-toggle span {
+  color: #475569;
+}
+
+.plan-footer {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.plan-footer .plan-toggle {
+  justify-content: flex-start;
+  flex-direction: row;
+}
+
+.plan-footer .plan-submit {
+  margin-left: auto;
+}
+
+.plan-submit {
+  border: none;
+  border-radius: 16px;
+  padding: 12px 32px;
+  background: linear-gradient(120deg, #fb6995, #f472b6);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 15px 30px rgba(236, 72, 153, 0.25);
+  cursor: pointer;
+}
+
+.plan-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .video-modal {
@@ -3194,49 +3379,6 @@ button.primary.slim {
   .video-field-row--focus {
     grid-template-columns: 1fr;
     gap: 18px;
-  }
-}
-
-.plan-preview {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(148, 163, 184, 0.35);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.plan-preview__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.plan-preview__toggle {
-  display: flex;
-  align-items: center;
-}
-
-.preview-title {
-  margin: 0;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.preview-helper {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 0.85rem;
-}
-
-@media (min-width: 640px) {
-  .plan-preview {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .plan-preview__copy {
-    flex: 1;
   }
 }
 

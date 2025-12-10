@@ -44,26 +44,32 @@ function PlanModal({ open, mode, form, setForm, pendingAction, onClose, onSubmit
       title={mode === 'create' ? 'Create subscription plan' : 'Update subscription plan'}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="modal-form">
-        <section className="modal-section">
-          <header>
-            <h4>Plan settings</h4>
-            <p>Select the plan length and prices. Billing labels are auto-calculated on save.</p>
-          </header>
-          <div className="modal-grid">
-            <label>
-              Plan month
-              <select value={form.durationMonths} onChange={handleInputChange('durationMonths')} required>
+      <form onSubmit={handleSubmit} className="modal-form plan-modal">
+        <section className="plan-modal-section">
+          <div className="plan-section-head">
+            <p className="plan-section-title">Plan settings</p>
+            <p className="plan-section-description">
+              Select the plan length and prices. Billing labels are auto-calculated on save.
+            </p>
+          </div>
+          <div className="plan-field-grid">
+            <label className="plan-field">
+              <span>Plan month</span>
+              <select
+                value={form.durationMonths}
+                onChange={handleInputChange('durationMonths')}
+                required
+              >
                 {PLAN_DURATION_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
-              <p className="field-hint">Only 1, 3, or 12-month plans are supported.</p>
+              <small>Only 1, 3, or 12-month plans are supported.</small>
             </label>
-            <label>
-              Original price
+            <label className="plan-field">
+              <span>Original price</span>
               <input
                 type="number"
                 min="0"
@@ -74,8 +80,8 @@ function PlanModal({ open, mode, form, setForm, pendingAction, onClose, onSubmit
                 required
               />
             </label>
-            <label>
-              Discounted price
+            <label className="plan-field plan-field--full">
+              <span>Discounted price</span>
               <input
                 type="number"
                 min="0"
@@ -85,45 +91,41 @@ function PlanModal({ open, mode, form, setForm, pendingAction, onClose, onSubmit
                 placeholder="699"
                 required
               />
-              <p className="field-hint">Per-month rate and billing badge are generated for you.</p>
+              <small>Per-month rate and billing badge are generated for you.</small>
             </label>
           </div>
-          <div className="plan-preview">
-            <div className="plan-preview__copy">
-              <p className="preview-title">Auto-calculated preview</p>
-              <p className="preview-helper">
-                Final numbers come from the backend, but here&apos;s what to expect.
-              </p>
-              <div className="modal-info-grid">
-                <div className="modal-info-card">
-                  <strong>Billing label</strong>
-                  <span>{billingPreview}</span>
-                </div>
-                <div className="modal-info-card">
-                  <strong>Approx. per month</strong>
-                  <span>{formatPreviewAmount(monthlyPreview)}</span>
-                </div>
-              </div>
+        </section>
+        <div className="plan-divider" />
+        <section className="plan-modal-section">
+          <div className="plan-section-head">
+            <p className="plan-section-title">Auto-calculated preview</p>
+            <p className="plan-section-description">
+              Final numbers come from the backend, but here&apos;s what to expect.
+            </p>
+          </div>
+          <div className="plan-preview-grid">
+            <div className="plan-preview-card">
+              <span>Billing label</span>
+              <strong>{billingPreview}</strong>
             </div>
-            <div className="plan-preview__toggle">
-              <label className="toggle-control">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-                <span>Plan is active and visible to members</span>
-              </label>
+            <div className="plan-preview-card">
+              <span>Approx. per month</span>
+              <strong>{formatPreviewAmount(monthlyPreview)}</strong>
             </div>
           </div>
         </section>
-        <div className="modal-actions">
-          <button type="button" className="secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" disabled={Boolean(pendingAction)}>
+        <div className="plan-footer">
+          <label className="plan-toggle">
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, isActive: event.target.checked }))
+              }
+            />
+            <span>Plan is active & visible to members</span>
+          </label>
+          <button type="submit" className="plan-submit" disabled={Boolean(pendingAction)}>
             {pendingAction ? 'Saving…' : mode === 'create' ? 'Publish plan' : 'Save changes'}
           </button>
         </div>
