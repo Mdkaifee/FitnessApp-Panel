@@ -13,6 +13,7 @@ function QuestionsView({
   onRefresh,
   onDeleteQuestion,
   onEditQuestion,
+  onAddQuestion = () => {},
 }) {
   const list = questionsData?.questions ?? []
   const handleDelete = (question) => {
@@ -43,42 +44,60 @@ function QuestionsView({
             {list.length === 1 ? '' : 's'} with current filters.
           </p>
         </div>
-        <div className="question-filter">
-          <select
-            value={questionsFilter.answerType}
-            onChange={(event) =>
-              setQuestionsFilter((prev) => ({ ...prev, answerType: event.target.value }))
-            }
-          >
-            <option value="">All answer types</option>
-            {ANSWER_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={questionsFilter.gender}
-            onChange={(event) =>
-              setQuestionsFilter((prev) => ({ ...prev, gender: event.target.value }))
-            }
-          >
-            <option value="">All genders</option>
-            <option value="Female">Female</option>
-            <option value="Male">Male</option>
-          </select>
-          <select
-            value={questionsFilter.status}
-            onChange={(event) =>
-              setQuestionsFilter((prev) => ({ ...prev, status: event.target.value }))
-            }
-          >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <button className="refresh-button" onClick={onRefresh} aria-label="Refresh questions">
-            ↻
+        <div className="questions-filter-bar">
+          <button type="button" className="filter-icon-button" aria-label="Filter questions">
+            <img src="/filter.png" alt="Filter" />
+          </button>
+          <div className="question-filter-selects">
+            <label className="question-filter-field">
+              <select
+                value={questionsFilter.answerType}
+                onChange={(event) =>
+                  setQuestionsFilter((prev) => ({ ...prev, answerType: event.target.value }))
+                }
+              >
+                <option value="">All answer types</option>
+                {ANSWER_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="question-filter-field">
+              <select
+                value={questionsFilter.gender}
+                onChange={(event) =>
+                  setQuestionsFilter((prev) => ({ ...prev, gender: event.target.value }))
+                }
+              >
+                <option value="">All genders</option>
+                <option value="Female">Female</option>
+                <option value="Male">Male</option>
+              </select>
+            </label>
+            <label className="question-filter-field">
+              <select
+                value={questionsFilter.status}
+                onChange={(event) =>
+                  setQuestionsFilter((prev) => ({ ...prev, status: event.target.value }))
+                }
+              >
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </label>
+            <button
+              className="question-refresh-button"
+              onClick={onRefresh}
+              aria-label="Refresh questions"
+            >
+              ↻
+            </button>
+          </div>
+          <button type="button" className="add-question-button" onClick={onAddQuestion}>
+            + Add Question
           </button>
         </div>
       </div>

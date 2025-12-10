@@ -70,10 +70,18 @@ export const fetchUsers = (token) =>
     token,
   })
 
-export const fetchVideosByCategory = (category, token, page = 1, pageSize = 20) =>
-  apiRequest(`/videos/db/${encodeURIComponent(category)}?page=${page}&page_size=${pageSize}`, {
+export const fetchVideosByCategory = (category, token, page = 1, pageSize = 20, { gender } = {}) => {
+  const params = new URLSearchParams()
+  params.append('page', String(page))
+  params.append('page_size', String(pageSize))
+  if (gender && gender !== 'All') {
+    params.append('gender', gender)
+  }
+  const query = params.toString()
+  return apiRequest(`/videos/db/${encodeURIComponent(category)}?${query}`, {
     token,
   })
+}
 
 export const uploadVideo = (formData, token) =>
   apiRequest('/videos/upload', {

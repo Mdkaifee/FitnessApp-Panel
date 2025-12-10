@@ -46,7 +46,7 @@ import {
 import AuthView from './views/AuthView'
 import DashboardView from './views/DashboardView'
 import UsersView from './views/UsersView'
-import VideosView from './views/VideosView'
+import VideosView, { ALL_VIDEOS_CATEGORY } from './views/VideosView'
 import QuestionsView from './views/QuestionsView'
 import SubscriptionView from './views/SubscriptionView'
 import PrivacyPolicyView from './views/PrivacyPolicyView'
@@ -118,6 +118,19 @@ const buildPlanPayloadFromRecord = (plan, overrides = {}) => ({
         : Boolean(plan?.is_active ?? plan?.isActive ?? true),
 })
 
+const deriveCategoryCountsFromVideos = (videos) => {
+  if (!Array.isArray(videos) || videos.length === 0) return null
+  return videos.reduce((acc, video) => {
+    const rawBodyPart =
+      (typeof video?.body_part === 'string' && video.body_part.trim()) ||
+      (typeof video?.bodyPart === 'string' && video.bodyPart.trim()) ||
+      ''
+    const key = rawBodyPart || 'Uncategorized'
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {})
+}
+
 const VIDEO_PAGE_SIZE = 20
 
 const formatAnalyticsRangeLabel = (range) => {
@@ -168,12 +181,12 @@ function App() {
   const [pendingAction, setPendingAction] = useState('')
   const [resendSeconds, setResendSeconds] = useState(0)
   const [hasRequestedOtp, setHasRequestedOtp] = useState(false)
-  const [videoCategory, setVideoCategory] = useState(VIDEO_CATEGORIES[0].value)
+  const [videoCategory, setVideoCategory] = useState(ALL_VIDEOS_CATEGORY)
+  const [videoGender, setVideoGender] = useState('All')
   const [videosData, setVideosData] = useState(null)
   const [videosLoading, setVideosLoading] = useState(false)
   const [videosError, setVideosError] = useState(null)
   const [videoPage, setVideoPage] = useState(1)
-  const [videosHasNext, setVideosHasNext] = useState(false)
   const [videoPending, setVideoPending] = useState('')
   const [videoForm, setVideoForm] = useState(getDefaultVideoForm)
   const [videoModalMode, setVideoModalMode] = useState('create')
@@ -225,8 +238,8 @@ function App() {
         }
       case 'videos':
         return {
-          title: 'Videos',
-          description: 'Manage your coaching video resources from this screen.',
+          title: '',
+          description: '',
         }
       case 'questions':
         return {
@@ -401,34 +414,86 @@ function App() {
   )
 
   const loadVideos = useCallback(
-    async (categoryOverride, pageOverride = 1) => {
+    async (categoryValue, pageValue = 1, genderValue = 'All') => {
       if (!token) return
-      const targetCategory = categoryOverride ?? videoCategory
-      const targetPage = pageOverride ?? 1
+      const targetCategory = categoryValue ?? ALL_VIDEOS_CATEGORY
+      const targetGender = genderValue ?? 'All'
+      const normalizedCategory =
+        !targetCategory || targetCategory === ALL_VIDEOS_CATEGORY ? 'all' : targetCategory
+      const normalizedGender = targetGender && targetGender !== 'All' ? targetGender : ''
+      const targetPage = pageValue ?? 1
       setVideosLoading(true)
       setVideosError(null)
       try {
         const response = await fetchVideosByCategory(
-          targetCategory,
+          normalizedCategory,
           token,
           targetPage,
           VIDEO_PAGE_SIZE,
+          { gender: normalizedGender },
         )
         const payload = response?.data ?? {}
+        const derivedCounts = deriveCategoryCountsFromVideos(payload?.videos)
         setVideosData((prev) => {
-          const previousCategory = prev?.category
-          const shouldReset = targetPage === 1 || previousCategory !== targetCategory
-          const previousVideos = shouldReset ? [] : prev?.videos ?? []
-          const mergedVideos = [...previousVideos, ...(payload.videos ?? [])]
+          const countsFromApi = payload?.category_counts ?? payload?.categoryCounts ?? null
+          const hasApiCounts =
+            countsFromApi && typeof countsFromApi === 'object' && Object.keys(countsFromApi).length > 0
+          const derivedCountsValid =
+            derivedCounts && typeof derivedCounts === 'object' && Object.keys(derivedCounts).length > 0
+          const previousCountsSnapshot =
+            prev?.category_counts_snapshot ??
+            prev?.categoryCountsSnapshot ??
+            prev?.category_counts ??
+            prev?.categoryCounts ??
+            null
+          const shouldUpdateSnapshot =
+            (hasApiCounts || derivedCountsValid) && normalizedCategory === 'all' && !normalizedGender
+          const nextCountsSnapshot = shouldUpdateSnapshot
+            ? hasApiCounts
+              ? countsFromApi
+              : derivedCounts
+            : previousCountsSnapshot ?? null
+          const countsForUi =
+            nextCountsSnapshot ??
+            (hasApiCounts ? countsFromApi : null) ??
+            previousCountsSnapshot ??
+            (derivedCountsValid ? derivedCounts : null) ??
+            null
+          const countsTotal =
+            countsForUi && typeof countsForUi === 'object'
+              ? Object.values(countsForUi).reduce((sum, value) => sum + (Number(value) || 0), 0)
+              : null
+          const pageSize =
+            payload?.page_size ?? payload?.pageSize ?? prev?.page_size ?? VIDEO_PAGE_SIZE
+          const totalCountFromPayload =
+            payload?.total ??
+            payload?.count ??
+            payload?.total_count ??
+            payload?.totalCount ??
+            payload?.videos?.length ??
+            prev?.total ??
+            0
+          const totalCount =
+            normalizedCategory === 'all' && !normalizedGender
+              ? countsTotal ?? totalCountFromPayload
+              : totalCountFromPayload
           return {
+            ...prev,
             ...payload,
             category: targetCategory,
-            videos: mergedVideos,
-            count: mergedVideos.length,
+            category_counts_snapshot: nextCountsSnapshot ?? undefined,
+            categoryCountsSnapshot: nextCountsSnapshot ?? undefined,
+            category_counts: countsForUi ?? undefined,
+            categoryCounts: countsForUi ?? undefined,
+            page_size: pageSize,
+            videos: payload?.videos ?? [],
+            total: totalCount,
+            pageCount: Math.max(1, Math.ceil(Math.max(totalCount, 0) / pageSize)),
+            gender: targetGender,
           }
         })
-        setVideoPage(payload?.page ?? targetPage)
-        setVideosHasNext(Boolean(payload?.has_next))
+        const nextPageValue = Number(payload?.page ?? targetPage) || 1
+        setVideoPage(nextPageValue)
       } catch (error) {
         setVideosError(error?.message ?? 'Unable to load videos.')
         handleApiError(error)
@@ -436,7 +501,7 @@ function App() {
         setVideosLoading(false)
       }
     },
-    [handleApiError, token, videoCategory],
+    [handleApiError, token],
   )
 
   const loadQuestions = useCallback(async () => {
@@ -649,11 +714,11 @@ function App() {
     }
   }, [activeView, isLoggedIn, loadUsers])
 
-  useEffect(() => {
-    if (isLoggedIn && activeView === 'videos') {
-      loadVideos(videoCategory, 1)
-    }
-  }, [activeView, isLoggedIn, loadVideos, videoCategory])
+useEffect(() => {
+  if (isLoggedIn && activeView === 'videos') {
+    loadVideos(videoCategory, 1, videoGender)
+  }
+}, [activeView, isLoggedIn, loadVideos, videoCategory, videoGender])
 
   useEffect(() => {
     if (isLoggedIn && activeView === 'questions') {
@@ -829,17 +894,36 @@ function App() {
     setOtp(numericValue)
   }
 
+  const videoPageCount = videosData?.pageCount ?? Math.max(1, Math.ceil(Math.max(videosData?.total ?? 0, 0) / VIDEO_PAGE_SIZE))
+
   const handleVideoCategoryChange = (value) => {
     setVideoCategory(value)
     setVideoPage(1)
-    setVideosHasNext(false)
+    loadVideos(value, 1, videoGender)
   }
 
-  const handleVideosNextPage = useCallback(() => {
-    if (!videosHasNext || videosLoading) return
-    const nextPage = (videoPage ?? 1) + 1
-    loadVideos(videoCategory, nextPage)
-  }, [loadVideos, videoCategory, videoPage, videosHasNext, videosLoading])
+  const handleVideoGenderChange = (value) => {
+    setVideoGender(value)
+    setVideoPage(1)
+    loadVideos(videoCategory, 1, value)
+  }
+
+  const handleVideoFiltersReset = () => {
+    setVideoGender('All')
+    setVideoCategory(ALL_VIDEOS_CATEGORY)
+    setVideoPage(1)
+    loadVideos(ALL_VIDEOS_CATEGORY, 1, 'All')
+  }
+
+  const handleVideosPageChange = useCallback(
+    (page) => {
+      const currentPage = videoPage ?? 1
+      const nextPage = Math.max(1, Math.min(Number(page) || 1, videoPageCount))
+      if (nextPage === currentPage) return
+      loadVideos(videoCategory, nextPage, videoGender)
+    },
+    [loadVideos, videoCategory, videoGender, videoPage, videoPageCount],
+  )
 
   const resetVideoForm = () => setVideoForm(getDefaultVideoForm())
 
@@ -1237,22 +1321,10 @@ function App() {
           <div className="content">
             <header className="content-header">
               <div>
-                <h1>{viewMeta.title}</h1>
-                <p>{viewMeta.description}</p>
+                {viewMeta.title ? <h1>{viewMeta.title}</h1> : null}
+                {viewMeta.description ? <p>{viewMeta.description}</p> : null}
               </div>
-              <div className="topbar-meta">
-                {/* {isLoggedIn && flowHint && <span className="pill neutral">Flow: {flowHint}</span>} */}
-                {isLoggedIn && activeView === 'videos' && (
-                  <button className="primary" onClick={openCreateVideoModal}>
-                    Upload Video
-                  </button>
-                )}
-                {isLoggedIn && activeView === 'questions' && (
-                  <button className="primary" onClick={openCreateQuestionModal}>
-                    Add Question
-                  </button>
-                )}
-              </div>
+              <div className="topbar-meta" />
             </header>
             <main className="main-content">
               {activeView === 'dashboard' && (
@@ -1286,14 +1358,19 @@ function App() {
                   videosData={videosData}
                   videosLoading={videosLoading}
                   videosError={videosError}
-                  videosHasNext={videosHasNext}
                   videoCategory={videoCategory}
+                  videoGender={videoGender}
                   videoPending={videoPending}
                   onCategoryChange={handleVideoCategoryChange}
-                  onRefresh={() => loadVideos(videoCategory, 1)}
+                  onGenderChange={handleVideoGenderChange}
+                  onResetFilters={handleVideoFiltersReset}
+                  onRefresh={() => loadVideos(videoCategory, 1, videoGender)}
                   onEditVideo={openEditVideoModal}
                   onDeleteVideo={handleDeleteVideo}
-                  onLoadMore={handleVideosNextPage}
+                  currentPage={videoPage}
+                  totalPages={videoPageCount}
+                  onPageChange={handleVideosPageChange}
+                  onUploadVideo={openCreateVideoModal}
                 />
               )}
               {activeView === 'questions' && (
@@ -1307,6 +1384,7 @@ function App() {
                   onRefresh={loadQuestions}
                   onDeleteQuestion={handleDeleteQuestion}
                   onEditQuestion={handleEditQuestion}
+                  onAddQuestion={openCreateQuestionModal}
                 />
               )}
               {activeView === 'subscription' && (
