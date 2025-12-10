@@ -254,9 +254,9 @@ function VideosView({
                   </div>
 
                   <div className="video-card-footer">
-                    <div className="video-gender-icon" title={video.gender ?? 'Gender'}>
+                    {/* <div className="video-gender-icon" title={video.gender ?? 'Gender'}>
                       <img src={genderIcon} alt={video.gender ?? 'Gender'} />
-                    </div>
+                    </div> */}
                     <div className="video-actions">
                       <div className="actions-right">
                         <button
