@@ -228,8 +228,8 @@ function App() {
     switch (activeView) {
       case 'dashboard':
         return {
-          title: 'Profile Overview',
-          description: 'Review current account status and personal details.',
+          title: '',
+          description: '',
         }
       case 'users':
         return {

@@ -190,33 +190,82 @@ function DashboardView({
       genderEntries.length ||
       categoryGenderEntries.length)
 
+  const summaryCards = [
+    {
+      label: 'Total users',
+      value: totalUsers,
+      accent: 'accent-indigo',
+      iconSrc: '/1.png',
+    },
+    {
+      label: 'Active users',
+      value: activeUsers,
+      accent: 'accent-green',
+      iconSrc: '/2.png',
+    },
+    {
+      label: 'Inactive users',
+      value: inactiveUsers,
+      accent: 'accent-orange',
+      iconSrc: '/3.png',
+    },
+    {
+      label: 'Videos available',
+      value: videosAvailable,
+      accent: 'accent-purple',
+      iconSrc: '/4.png',
+    },
+  ]
+
   return (
     <div className="dashboard-panels">
-      <div className="dashboard-avatar-launcher">
-        <button
-          type="button"
-          className="profile-avatar-button fab"
-          onClick={() => setProfileModalOpen(true)}
-          aria-label="View profile details"
-        >
-          {profile.photo ? <img src={photoUrl} alt={fullName} /> : <span>{initials}</span>}
-        </button>
-      </div>
-      <div className="panel dashboard-stats-panel">
-        <div className="dashboard-stats-header">
-          <div>
-            <p className="eyebrow muted">Workspace insights</p>
-            <h2>Content & member snapshot</h2>
-            <p>Video availability and user activity at a glance.</p>
+      <div className="dashboard-page-header">
+        <div className="dashboard-page-copy">
+          <h1>Profile Overview</h1>
+          <p>Review current account status and personal details.</p>
+        </div>
+        <div className="dashboard-page-greeting">
+          <div className="dashboard-page-greeting-text">
+            <p className="welcome-line">
+              Welcome back, <strong>{fullName}</strong>
+            </p>
+            <span className="greeting-role">Admin Suite</span>
           </div>
           <button
-            className="refresh-button"
-            onClick={() => onRefreshStats?.()}
-            aria-label="Refresh dashboard stats"
-            disabled={statsLoading}
+            type="button"
+            className="profile-avatar-button mini"
+            onClick={() => setProfileModalOpen(true)}
+            aria-label="View profile details"
           >
-            {statsLoading ? '…' : '↻'}
+            {profile.photo ? <img src={photoUrl} alt={fullName} /> : <span>{initials}</span>}
           </button>
+        </div>
+      </div>
+      <div className="dashboard-stats-panel">
+        <div className="dashboard-summary-head summary-actions-only">
+          <div className="dashboard-summary-actions">
+            <button
+              className="dashboard-refresh"
+              onClick={() => onRefreshStats?.()}
+              aria-label="Refresh dashboard stats"
+              disabled={statsLoading}
+            >
+              {statsLoading ? '…' : '↻'}
+            </button>
+          </div>
+        </div>
+        <div className="summary-card-grid">
+          {summaryCards.map((card) => (
+            <div key={card.label} className={`summary-card ${card.accent}`}>
+              <div className="summary-card-icon">
+                {card.iconSrc ? <img src={card.iconSrc} alt="" /> : null}
+              </div>
+              <div className="summary-card-body">
+                <strong>{formatNumber(card.value)}</strong>
+                <span className="summary-card-label">{card.label}</span>
+              </div>
+            </div>
+          ))}
         </div>
         {statsError && <p className="error-text">{statsError}</p>}
         {statsLoading && !statsReady && <p>Loading stats…</p>}
@@ -224,39 +273,14 @@ function DashboardView({
           <p>No dashboard metrics available yet.</p>
         )}
         {statsReady && (
-          <>
-            <div className="stats-card-grid">
-              <div className="stat-card">
-                <span className="label">Total users</span>
-                <strong>{formatNumber(totalUsers)}</strong>
-              </div>
-              <div className="stat-card">
-                <span className="label">Active users</span>
-                <strong>{formatNumber(activeUsers)}</strong>
-                <span className="stat-subtext">{userActivePercent}% active</span>
-              </div>
-              <div className="stat-card">
-                <span className="label">Inactive users</span>
-                <strong>{formatNumber(inactiveUsers)}</strong>
-                <span className="stat-subtext">{userInactivePercent}% inactive</span>
-              </div>
-              <div className="stat-card">
-                <span className="label">Videos available</span>
-                <strong>{formatNumber(videosAvailable)}</strong>
-                {totalVideos > 0 && (
-                  <span className="stat-subtext">
-                    {formatNumber(totalVideos)} total ·{' '}
-                    {Math.round((videosAvailable / totalVideos) * 100) || 0}% ready
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="stats-chart-grid">
-              <div className="chart-card">
-                <header>
-                  <h4>Videos by category</h4>
-                  <span className="chart-total">{formatNumber(totalVideos)} total</span>
-                </header>
+          <div className="stats-chart-grid">
+            <div className="chart-card">
+              <header className="chart-card-head">
+                <div>
+                  <p className="chart-title">Video by category</p>
+                </div>
+                <span className="chart-total">({formatNumber(totalVideos)} Total)</span>
+              </header>
                 {sortedCategories.length === 0 ? (
                   <p className="chart-empty">No category breakdown available.</p>
                 ) : (
@@ -265,11 +289,13 @@ function DashboardView({
                   </div>
                 )}
               </div>
-              <div className="chart-card">
-                <header>
-                  <h4>User activity</h4>
-                  <span className="chart-total">{formatNumber(totalUsers)} members</span>
-                </header>
+            <div className="chart-card">
+              <header className="chart-card-head">
+                <div>
+                  <p className="chart-title">User activity</p>
+                </div>
+                <span className="chart-total">({formatNumber(totalUsers)} Members)</span>
+              </header>
                 {totalUsers === 0 ? (
                   <p className="chart-empty">No user data yet.</p>
                 ) : (
@@ -292,30 +318,33 @@ function DashboardView({
                   </div>
                 )}
               </div>
-              <div className="chart-card">
-                <header>
-                  <h4>Videos by gender</h4>
-                  <span className="chart-total">{formatNumber(totalVideos)} total</span>
-                </header>
-                <div className="chart-wrapper doughnut-wrapper">
-                  <VideoGenderChart entries={genderEntries} />
+            <div className="chart-card">
+              <header className="chart-card-head">
+                <div>
+                  <p className="chart-title">Video by gender</p>
                 </div>
-              </div>
-              <div className="chart-card">
-                <header>
-                  <h4>Category × gender</h4>
-                  <span className="chart-total">{formatNumber(totalVideos)} total</span>
-                </header>
-                {categoryGenderEntries.length === 0 ? (
-                  <p className="chart-empty">No category and gender data available.</p>
-                ) : (
-                  <div className="chart-wrapper tall-chart">
-                    <CategoryGenderChart entries={categoryGenderEntries} />
-                  </div>
-                )}
+                <span className="chart-total">({formatNumber(totalVideos)} Total)</span>
+              </header>
+              <div className="chart-wrapper doughnut-wrapper">
+                <VideoGenderChart entries={genderEntries} />
               </div>
             </div>
-          </>
+            <div className="chart-card">
+              <header className="chart-card-head">
+                <div>
+                  <p className="chart-title">Category × gender</p>
+                </div>
+                <span className="chart-total">({formatNumber(totalVideos)} Total)</span>
+              </header>
+              {categoryGenderEntries.length === 0 ? (
+                <p className="chart-empty">No category and gender data available.</p>
+              ) : (
+                <div className="chart-wrapper tall-chart">
+                  <CategoryGenderChart entries={categoryGenderEntries} />
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
       <Modal

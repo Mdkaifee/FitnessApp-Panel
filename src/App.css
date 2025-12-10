@@ -900,12 +900,6 @@ button.secondary {
   padding-top: 16px;
 }
 
-.dashboard-avatar-launcher {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
-}
-
 .profile-avatar-button {
   width: 64px;
   height: 64px;
@@ -1025,51 +1019,166 @@ button.secondary {
   gap: 24px;
 }
 
-.dashboard-stats-panel {
-  background: #fff;
-  border-radius: 22px;
-  border: 1px solid var(--color-border);
-  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.05);
-}
-
-.dashboard-stats-header {
+.dashboard-page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--color-border);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 18px;
 }
 
-.dashboard-stats-header h2 {
-  margin: 4px 0 0;
-}
-
-.stats-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-top: 20px;
-}
-
-.stat-card {
-  background: linear-gradient(135deg, #f8fbff, #eef4ff);
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 18px;
-  padding: 16px;
+.dashboard-page-copy {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.stat-card strong {
-  font-size: 1.6rem;
+.dashboard-page-copy h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.dashboard-page-copy p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 1rem;
+}
+
+.dashboard-page-greeting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-page-greeting-text {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.dashboard-page-greeting-text .welcome-line {
+  margin: 0;
+  font-size: 1 rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.dashboard-page-greeting-text .welcome-line strong {
+  font: inherit;
+}
+
+.dashboard-page-greeting-text .greeting-role {
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.dashboard-stats-panel {
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.dashboard-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dashboard-summary-head.summary-actions-only {
+  justify-content: flex-end;
+}
+
+.dashboard-refresh {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #fb6995, #f472b6);
+  color: #fff;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dashboard-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.summary-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.05);
+}
+
+.summary-card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f6ff;
+}
+
+.summary-card-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.summary-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-card-body strong {
+  font-size: 1.45rem;
   color: #0f172a;
 }
 
-.stat-subtext {
-  color: var(--color-muted);
-  font-size: 0.85rem;
+.summary-card-label {
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.summary-card.accent-indigo .summary-card-icon {
+  background: rgba(99, 102, 241, 0.18);
+}
+
+.summary-card.accent-green .summary-card-icon {
+  background: rgba(52, 211, 153, 0.2);
+}
+
+.summary-card.accent-orange .summary-card-icon {
+  background: rgba(251, 113, 133, 0.2);
+}
+
+.summary-card.accent-purple .summary-card-icon {
+  background: rgba(129, 140, 248, 0.2);
 }
 
 .stats-chart-grid {
@@ -1080,10 +1189,11 @@ button.secondary {
 }
 
 .chart-card {
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  border: 1px solid #edf0ff;
   border-radius: 18px;
   padding: 16px;
-  background: #f8fafc;
+  background: #fff;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.05);
 }
 
 .chart-card header {
@@ -1094,8 +1204,18 @@ button.secondary {
   gap: 12px;
 }
 
-.chart-card h4 {
+.chart-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.chart-title {
   margin: 0;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .chart-total {
