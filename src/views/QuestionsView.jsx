@@ -16,6 +16,7 @@ function QuestionsView({
   onAddQuestion = () => {},
 }) {
   const list = questionsData?.questions ?? []
+  const questionCount = questionsData?.count ?? list.length
   const handleDelete = (question) => {
     Swal.fire({
       title: 'Delete question?',
@@ -35,16 +36,16 @@ function QuestionsView({
   }
 
   return (
-    <div className="panel questions-panel">
+    <div className="questions-panel">
       <div className="questions-header">
-        <div>
-          <h2>Questions</h2>
-          <p>
-            Showing {questionsData?.count ?? list.length} question
-            {list.length === 1 ? '' : 's'} with current filters.
-          </p>
+        <div className="questions-heading">
+          <h2>
+            Questions <span>({questionCount})</span>
+          </h2>
+          <p>Keep up with incoming member questions and replies.</p>
         </div>
         <div className="questions-filter-bar">
+          <img src="/download.png" alt="Upload icon" className="header-action-icon" />
           <button type="button" className="filter-icon-button" aria-label="Filter questions">
             <img src="/filter.png" alt="Filter" />
           </button>
@@ -64,7 +65,7 @@ function QuestionsView({
                 ))}
               </select>
             </label>
-            <label className="question-filter-field">
+            {/* <label className="question-filter-field">
               <select
                 value={questionsFilter.gender}
                 onChange={(event) =>
@@ -75,7 +76,7 @@ function QuestionsView({
                 <option value="Female">Female</option>
                 <option value="Male">Male</option>
               </select>
-            </label>
+            </label> */}
             <label className="question-filter-field">
               <select
                 value={questionsFilter.status}
@@ -88,13 +89,13 @@ function QuestionsView({
                 <option value="inactive">Inactive</option>
               </select>
             </label>
-            <button
+            {/* <button
               className="question-refresh-button"
               onClick={onRefresh}
               aria-label="Refresh questions"
             >
               ↻
-            </button>
+            </button> */}
           </div>
           <button type="button" className="add-question-button" onClick={onAddQuestion}>
             + Add Question
@@ -117,11 +118,11 @@ function QuestionsView({
                     {question.is_active ? 'Active' : 'Inactive'}
                   </span>
                   {question.is_required && <span className="pill neutral">Required</span>}
-                  <span className="pill neutral">
+                  {/* <span className="pill neutral">
                     {question.gender?.toLowerCase() === GENDER_API_BOTH.toLowerCase()
                       ? GENDER_ALL_LABEL
                       : question.gender || GENDER_ALL_LABEL}
-                  </span>
+                  </span> */}
                 </div>
               </header>
               <div className="question-body">

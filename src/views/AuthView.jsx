@@ -32,6 +32,12 @@ function AuthView({
     }
   }, [authStep])
 
+  useEffect(() => {
+    if (authStep === 'otp') {
+      otpInputRef.current?.focus()
+    }
+  }, [authStep])
+
   return (
     <section className="auth-hero">
       <div className="login-card">
@@ -103,6 +109,12 @@ function AuthView({
                   value={otp}
                   onChange={(event) => onOtpChange(event.target.value)}
                   maxLength={6}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && otp.length === 6 && trimmedEmail && pendingAction !== 'verify') {
+                      event.preventDefault()
+                      onVerifyOtp()
+                    }
+                  }}
                 />
               </div>
               <button
@@ -121,9 +133,9 @@ function AuthView({
                   {resendSeconds > 0 ? `Resend OTP (${formatResendTime()})` : 'Resend OTP'}
                 </button>
               </div>
-              <button type="button" className="change-email-button" onClick={onBackToLogin}>
+              {/* <button type="button" className="change-email-button" onClick={onBackToLogin}>
                 Change Email
-              </button>
+              </button> */}
             </div>
           )}
         </div>

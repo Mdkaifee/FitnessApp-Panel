@@ -12,9 +12,37 @@ const proxyConfig = API_PROXY_PATHS.reduce((acc, path) => {
   return acc
 }, {})
 
+const fseventsStubPlugin = {
+  name: 'vite:fsevents-stub',
+  enforce: 'pre',
+  resolveId(source) {
+    if (source === 'fsevents') {
+      return '\0fsevents-stub'
+    }
+    return null
+  },
+  load(id) {
+    if (id === '\0fsevents-stub') {
+      return `
+        export const watch = () => ({
+          stop() {},
+        });
+        export default { watch };
+      `
+    }
+    return null
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [fseventsStubPlugin, react()],
+  optimizeDeps: {
+    exclude: ['fsevents'],
+  },
+  ssr: {
+    external: ['fsevents'],
+  },
   server: {
     allowedHosts: ['*'],
     proxy: proxyConfig,

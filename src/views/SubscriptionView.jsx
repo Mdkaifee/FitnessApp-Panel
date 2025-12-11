@@ -79,6 +79,15 @@ function SubscriptionView({
   onStatusFilterChange,
 }) {
   const list = Array.isArray(plans) ? plans : []
+  const sortedPlans = [...list].sort((a, b) => {
+    const aActive = (a?.is_active ?? a?.isActive ?? true) ? 1 : 0
+    const bActive = (b?.is_active ?? b?.isActive ?? true) ? 1 : 0
+    if (aActive === bActive) {
+      return (a?.display_order ?? a?.displayOrder ?? a?.duration_months ?? 0) -
+        (b?.display_order ?? b?.displayOrder ?? b?.duration_months ?? 0)
+    }
+    return bActive - aActive
+  })
   const isViewingInactive = statusFilter === 'inactive'
   const shouldShowControls = list.length > 0 || isViewingInactive
 
@@ -112,16 +121,16 @@ function SubscriptionView({
       {shouldShowControls && (
         <div className="subscription-controls">
           <div className="subscription-actions">
-            <button className="secondary slim" onClick={handleStatusToggle} disabled={isLoading}>
+            {/* <button className="secondary slim" onClick={handleStatusToggle} disabled={isLoading}>
               {isViewingInactive ? 'Show active plans' : 'Inactive plans'}
-            </button>
-            <button className="secondary slim" onClick={onRefresh} disabled={isLoading}>
+            </button> */}
+            {/* <button className="secondary slim" onClick={onRefresh} disabled={isLoading}>
               {isLoading
                 ? 'Refreshing…'
                 : isViewingInactive
                   ? 'Refresh inactive'
                   : 'Refresh plans'}
-            </button>
+            </button> */}
             {!isViewingInactive && (
               <button className="primary slim" onClick={onAddPlan}>
                 Add plan
@@ -151,7 +160,7 @@ function SubscriptionView({
         </div>
       ) : (
         <div className="plan-grid">
-          {list.map((plan, index) => {
+          {sortedPlans.map((plan, index) => {
             const isActive = plan?.is_active ?? plan?.isActive ?? true
             const currency = getPlanCurrency(plan)
             const durationLabel = formatDurationLabel(getPlanDurationValue(plan))

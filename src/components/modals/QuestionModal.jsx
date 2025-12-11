@@ -149,14 +149,14 @@ function QuestionModal({
                         placeholder="Value"
                       />
                     </label>
-                    <label className="question-checkbox">
+                    {/* <label className="question-checkbox">
                       <input
                         type="checkbox"
                         checked={option.isActive}
                         onChange={() => toggleOptionActive(index)}
                       />
                       <span>Active</span>
-                    </label>
+                    </label> */}
                     {form.options.length > 1 && (
                       <button
                         type="button"

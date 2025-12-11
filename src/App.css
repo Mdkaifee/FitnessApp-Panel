@@ -28,7 +28,7 @@
   content: '';
   position: absolute;
   width: 40vw;
-  height: 50vh;
+  height: 30vh;
   border-radius: 0;
   z-index: 0;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
@@ -217,6 +217,78 @@
   flex-direction: column;
   gap: 16px;
   align-items: stretch;
+}
+
+@media (max-width: 1080px) {
+  .login-card {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+    width: min(100%, 940px);
+    height: auto;
+    margin: 4vh clamp(20px, 6vw, 60px);
+  }
+
+  .login-card__content {
+    padding: clamp(20px, 5vw, 36px);
+  }
+}
+
+@media (max-width: 768px) {
+  .auth-hero {
+    padding: clamp(16px, 5vw, 32px);
+    align-items: flex-start;
+  }
+
+  .auth-hero::before,
+  .auth-hero::after {
+    width: 65vw;
+    height: 35vh;
+    opacity: 0.5;
+  }
+
+  .login-card {
+    grid-template-columns: 1fr;
+    margin: 0;
+    width: 100%;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .login-card::after {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .login-card__media {
+    min-height: 220px;
+  }
+
+  .login-card__content {
+    padding: clamp(20px, 6vw, 32px);
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-hero::before,
+  .auth-hero::after {
+    display: none;
+  }
+
+  .login-card__media {
+    display: none;
+  }
+
+  .login-card__content {
+    padding: 20px 16px 32px;
+  }
+
+  .login-card__intro h2 {
+    font-size: 1.5rem;
+  }
+
+  .login-card__intro p {
+    font-size: 0.95rem;
+  }
 }
 
 .otp-label {
@@ -738,10 +810,11 @@ button.secondary {
 }
 
 .panel {
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 20px;
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
 }
 .policy-meta,
 .delete-meta {
@@ -2431,8 +2504,25 @@ button.secondary {
 }
 
 .plan-card--inactive {
-  opacity: 0.85;
+  opacity: 0.65;
   background: #f8fafc;
+  filter: grayscale(0.6);
+}
+
+.plan-card--inactive::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: rgba(248, 250, 252, 0.7);
+  backdrop-filter: blur(1.5px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.plan-card--inactive > * {
+  position: relative;
+  z-index: 1;
 }
 
 .plan-card__header {
@@ -3164,21 +3254,23 @@ button.primary.slim {
 }
 
 .upload-badge {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  background: #fff;
+  width: 58px;
+  height: 54px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fb6995, #f472b6);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #ec4899;
+  color: #fff;
   margin: 0 auto 6px;
-  box-shadow: 0 10px 25px rgba(236, 72, 153, 0.2);
+  /* box-shadow: 0 15px 30px rgba(236, 72, 153, 0.35); */
 }
 
-.upload-badge svg {
-  width: 22px;
-  height: 22px;
+
+.upload-badge img {
+  width: 26px;
+  height: 26px;
+  filter: brightness(0) invert(1);
 }
 
 .upload-title {
@@ -3211,7 +3303,7 @@ button.primary.slim {
   gap: 10px;
   padding: 14px 28px;
   background: linear-gradient(120deg, #fb6995, #f472b6);
-  box-shadow: 0 20px 45px rgba(236, 72, 153, 0.35);
+  box-shadow: none;
 }
 
 .button-icon {
@@ -3220,9 +3312,22 @@ button.primary.slim {
   justify-content: center;
 }
 
-.button-icon svg {
-  width: 18px;
-  height: 18px;
+.button-icon svg,
+.button-icon img {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.button-icon img {
+  filter: brightness(0) invert(1);
+}
+
+.button-icon.button-icon--no-box {
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  margin-right: 8px;
 }
 
 .question-modal-dialog {
@@ -3385,7 +3490,7 @@ button.primary.slim {
   background: linear-gradient(120deg, #fb6995, #f472b6);
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 15px 30px rgba(236, 72, 153, 0.25);
+  box-shadow: none;
 }
 
 @media (max-width: 720px) {
@@ -3626,9 +3731,9 @@ button.primary.slim {
 }
 .table-wrapper {
   overflow-x: auto;
-  border-radius: 16px;
-  border: 1px solid var(--color-border);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 }
 
 .user-name-button,

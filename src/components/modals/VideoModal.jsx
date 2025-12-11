@@ -120,15 +120,7 @@ function VideoModal({ open, mode, form, setForm, pendingAction, onClose, onSubmi
                   required={mode === 'create'}
                 />
                 <span className="upload-badge" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path
-                      d="M12 5v14m0-14l-4 4m4-4l4 4M6 19h12"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <img src="/download.png" alt="" />
                 </span>
                 <p className="upload-title">Drop video file or click to upload</p>
                 <p className="upload-hint">MP4, MPEG, or MOV up to 500 MB.</p>
@@ -145,16 +137,7 @@ function VideoModal({ open, mode, form, setForm, pendingAction, onClose, onSubmi
                   required={mode === 'create'}
                 />
                 <span className="upload-badge" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path
-                      d="M4 16l4-4 4 4 4-4 4 4"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="8" cy="8" r="1.5" fill="currentColor" />
-                  </svg>
+                  <img src="/download.png" alt="" />
                 </span>
                 <p className="upload-title">Drop thumbnail or click to upload</p>
                 <p className="upload-hint">PNG or JPG, minimum 800×600px.</p>
@@ -167,16 +150,8 @@ function VideoModal({ open, mode, form, setForm, pendingAction, onClose, onSubmi
 
           <div className="modal-actions video-modal-actions">
             <button type="submit" disabled={pendingAction || (mode === 'create' && uploadDisabled)}>
-              <span className="button-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path
-                    d="M12 5v12m0 0l-4-4m4 4l4-4M5 19h14"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+              <span className="button-icon button-icon--no-box" aria-hidden="true">
+                <img src="/download.png" alt="" />
               </span>
               {primaryLabel}
             </button>

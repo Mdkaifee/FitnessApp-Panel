@@ -22,6 +22,7 @@ import {
   updateSubscriptionPlan,
   deleteSubscriptionPlan,
 } from './services/api'
+import { uploadFileToSpaces } from './services/spaces'
 import './App.css'
 import {
   ACTIVE_VIEW_KEY,
@@ -57,6 +58,7 @@ import VideoModal from './components/modals/VideoModal'
 import QuestionModal from './components/modals/QuestionModal'
 import UserAnalyticsModal from './components/modals/UserAnalyticsModal'
 import PlanModal from './components/modals/PlanModal'
+// import { createLogger } from 'vite'
 
 const getInitialEmail = () => safeGetFromStorage(AUTH_EMAIL_KEY) ?? ''
 
@@ -243,8 +245,8 @@ function App() {
         }
       case 'questions':
         return {
-          title: 'Questions',
-          description: 'Keep up with incoming member questions and replies.',
+          title: '',
+          description: '',
         }
       case 'subscription':
         return {
@@ -933,6 +935,8 @@ useEffect(() => {
     setVideoModalOpen(true)
   }
 
+  console.log('videoForm', videoForm)
+
   const openEditVideoModal = (video) => {
     setVideoModalMode('edit')
     setVideoForm({
@@ -953,8 +957,10 @@ useEffect(() => {
   }
 
   const handleVideoModalSubmit = async () => {
+    const trimmedTitle = (videoForm.title ?? '').trim()
+    const trimmedDescription = (videoForm.description ?? '').trim()
     if (videoModalMode === 'create') {
-      if (!videoForm.title.trim()) {
+      if (!trimmedTitle) {
         setStatus({ type: 'error', text: 'Enter a title for the video.' })
         return
       }
@@ -964,16 +970,21 @@ useEffect(() => {
       }
       setVideoPending('upload')
       try {
-        const formData = new FormData()
-        formData.append('body_part', videoForm.bodyPart)
-        formData.append('gender', videoForm.gender)
-        formData.append('title', videoForm.title)
-        if (videoForm.description) {
-          formData.append('description', videoForm.description)
+        const [uploadedVideo, uploadedThumbnail] = await Promise.all([
+          uploadFileToSpaces(videoForm.videoFile, { folder: 'videos' }),
+          uploadFileToSpaces(videoForm.thumbnailFile, { folder: 'thumbnails' }),
+        ])
+        const payload = {
+          body_part: videoForm.bodyPart,
+          gender: videoForm.gender,
+          title: trimmedTitle,
+          video_url: uploadedVideo.url,
+          thumbnail_url: uploadedThumbnail.url,
         }
-        formData.append('video_file', videoForm.videoFile)
-        formData.append('thumbnail_file', videoForm.thumbnailFile)
-        const response = await uploadVideo(formData, token)
+        if (trimmedDescription) {
+          payload.description = trimmedDescription
+        }
+        const response = await uploadVideo(payload, token)
         setStatus({ type: 'success', text: response?.message ?? 'Video uploaded successfully.' })
         closeVideoModal()
         loadVideos(videoCategory, 1)
@@ -990,29 +1001,31 @@ useEffect(() => {
       return
     }
 
-    const formData = new FormData()
-    if (videoForm.bodyPart) {
-      formData.append('body_part', videoForm.bodyPart)
-    }
-    if (videoForm.gender) {
-      formData.append('gender', videoForm.gender)
-    }
-    if (videoForm.title) {
-      formData.append('title', videoForm.title)
-    }
-    if (videoForm.description) {
-      formData.append('description', videoForm.description)
-    }
-    if (videoForm.videoFile) {
-      formData.append('video_file', videoForm.videoFile)
-    }
-    if (videoForm.thumbnailFile) {
-      formData.append('thumbnail_file', videoForm.thumbnailFile)
-    }
-
     setVideoPending('update')
     try {
-      const response = await updateVideo(videoForm.videoId, formData, token)
+      const payload = {}
+      if (videoForm.bodyPart) {
+        payload.body_part = videoForm.bodyPart
+      }
+      if (videoForm.gender) {
+        payload.gender = videoForm.gender
+      }
+      if (trimmedTitle) {
+        payload.title = trimmedTitle
+      }
+      if (trimmedDescription) {
+        payload.description = trimmedDescription
+      }
+      if (videoForm.videoFile) {
+        const { url } = await uploadFileToSpaces(videoForm.videoFile, { folder: 'videos' })
+        payload.video_url = url
+      }
+      if (videoForm.thumbnailFile) {
+        const { url } = await uploadFileToSpaces(videoForm.thumbnailFile, { folder: 'thumbnails' })
+        payload.thumbnail_url = url
+      }
+
+      const response = await updateVideo(videoForm.videoId, payload, token)
       setStatus({ type: 'success', text: response?.message ?? 'Video updated successfully.' })
       closeVideoModal()
       loadVideos(videoCategory, 1)
@@ -1310,6 +1323,7 @@ useEffect(() => {
       ) : (
         <section className={isLoggedIn ? 'workspace' : 'public-view'}>
           {isLoggedIn && (
+            
             <Sidebar
               activeView={activeView}
               onViewChange={setActiveView}

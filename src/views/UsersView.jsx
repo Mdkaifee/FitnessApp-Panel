@@ -38,9 +38,9 @@ function UsersView({
           <h2>All Users</h2>
           <p>Showing {usersData?.total ?? list.length} total accounts.</p>
         </div>
-        <button className="refresh-button" onClick={onRefresh} aria-label="Refresh users list">
+        {/* <button className="refresh-button" onClick={onRefresh} aria-label="Refresh users list">
           ↻
-        </button>
+        </button> */}
       </div>
       {list.length === 0 ? (
         <p>No users available.</p>

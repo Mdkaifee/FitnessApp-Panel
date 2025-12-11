@@ -104,6 +104,14 @@ const formatNumber = (value) => {
   return Number(value).toLocaleString()
 }
 
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value)
+  if (Number.isFinite(parsed)) {
+    return parsed
+  }
+  return fallback
+}
+
 function DashboardView({
   profile,
   isLoading,
@@ -150,16 +158,81 @@ function DashboardView({
   ]
 
   const userStats = stats?.users ?? stats?.user ?? stats ?? {}
-  const totalUsers =
+  const fallbackAdminCount = profile?.is_admin ? 1 : 0
+  const fallbackActiveAdminCount = profile?.is_admin && profile?.is_active ? 1 : 0
+  const fallbackInactiveAdminCount =
+    profile?.is_admin && profile?.is_active === false ? 1 : 0
+  const rawTotalUsers =
     userStats.total ?? userStats.total_users ?? userStats.count ?? stats?.total_users ?? 0
+  const rawNonAdminTotal =
+    userStats.non_admin ??
+    userStats.non_admin_total ??
+    userStats.members ??
+    userStats.member_count ??
+    userStats.users_without_admin ??
+    stats?.non_admin_users ??
+    null
+  const adminUsers =
+    userStats.admin ??
+    userStats.admins ??
+    userStats.admin_count ??
+    userStats.admin_users ??
+    stats?.admin_users ??
+    stats?.total_admins ??
+    fallbackAdminCount
+  const totalUsers =
+    rawNonAdminTotal != null
+      ? Math.max(toNumber(rawNonAdminTotal), 0)
+      : Math.max(toNumber(rawTotalUsers) - toNumber(adminUsers), 0)
+  const rawActiveUsers =
+    userStats.active ??
+    userStats.active_users ??
+    userStats.active_count ??
+    stats?.active_users ??
+    0
+  const rawActiveNonAdmin =
+    userStats.active_non_admin ??
+    userStats.non_admin_active ??
+    userStats.active_members ??
+    userStats.member_active ??
+    stats?.active_non_admin_users ??
+    null
+  const adminActiveUsers =
+    userStats.admin_active ??
+    userStats.active_admin ??
+    userStats.admin_active_users ??
+    stats?.admin_active_users ??
+    fallbackActiveAdminCount
   const activeUsers =
-    userStats.active ?? userStats.active_users ?? userStats.active_count ?? stats?.active_users ?? 0
-  const inactiveUsers =
+    rawActiveNonAdmin != null
+      ? Math.max(toNumber(rawActiveNonAdmin), 0)
+      : Math.max(toNumber(rawActiveUsers) - toNumber(adminActiveUsers), 0)
+  const rawInactiveUsers =
     userStats.inactive ??
     userStats.inactive_users ??
     userStats.inactive_count ??
     stats?.inactive_users ??
-    (totalUsers && activeUsers ? Math.max(totalUsers - activeUsers, 0) : 0)
+    null
+  const rawInactiveNonAdmin =
+    userStats.inactive_non_admin ??
+    userStats.non_admin_inactive ??
+    userStats.inactive_members ??
+    stats?.inactive_non_admin_users ??
+    null
+  const adminInactiveUsers =
+    userStats.admin_inactive ??
+    userStats.inactive_admin ??
+    userStats.admin_inactive_users ??
+    stats?.admin_inactive_users ??
+    fallbackInactiveAdminCount
+  const inactiveUsers =
+    rawInactiveNonAdmin != null
+      ? Math.max(toNumber(rawInactiveNonAdmin), 0)
+      : rawInactiveUsers != null
+        ? Math.max(toNumber(rawInactiveUsers) - toNumber(adminInactiveUsers), 0)
+        : totalUsers && activeUsers
+          ? Math.max(totalUsers - activeUsers, 0)
+          : 0
   const videosStats = stats?.videos ?? stats ?? {}
   const totalVideos =
     videosStats.total ??
@@ -244,14 +317,14 @@ function DashboardView({
       <div className="dashboard-stats-panel">
         <div className="dashboard-summary-head summary-actions-only">
           <div className="dashboard-summary-actions">
-            <button
+            {/* <button
               className="dashboard-refresh"
               onClick={() => onRefreshStats?.()}
               aria-label="Refresh dashboard stats"
               disabled={statsLoading}
             >
               {statsLoading ? '…' : '↻'}
-            </button>
+            </button> */}
           </div>
         </div>
         <div className="summary-card-grid">
@@ -318,7 +391,7 @@ function DashboardView({
                   </div>
                 )}
               </div>
-            <div className="chart-card">
+            {/* <div className="chart-card">
               <header className="chart-card-head">
                 <div>
                   <p className="chart-title">Video by gender</p>
@@ -328,7 +401,7 @@ function DashboardView({
               <div className="chart-wrapper doughnut-wrapper">
                 <VideoGenderChart entries={genderEntries} />
               </div>
-            </div>
+            </div> */}
             <div className="chart-card">
               <header className="chart-card-head">
                 <div>
@@ -357,9 +430,9 @@ function DashboardView({
             <h3>{fullName}</h3>
             <p>{profile.email}</p>
           </div>
-          <button className="ghost-button" onClick={() => onRefresh?.()} aria-label="Refresh profile">
+          {/* <button className="ghost-button" onClick={() => onRefresh?.()} aria-label="Refresh profile">
             Refresh
-          </button>
+          </button> */}
         </div>
         <div className="profile-info-grid">
           {infoRows.map((row) => (

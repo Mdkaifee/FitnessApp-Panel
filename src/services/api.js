@@ -83,20 +83,18 @@ export const fetchVideosByCategory = (category, token, page = 1, pageSize = 20, 
   })
 }
 
-export const uploadVideo = (formData, token) =>
+export const uploadVideo = (payload, token) =>
   apiRequest('/videos/upload', {
     method: 'POST',
-    body: formData,
+    body: payload,
     token,
-    isFormData: true,
   })
 
-export const updateVideo = (videoId, formData, token) =>
+export const updateVideo = (videoId, payload, token) =>
   apiRequest(`/videos/${videoId}`, {
     method: 'PUT',
-    body: formData,
+    body: payload,
     token,
-    isFormData: true,
   })
 
 export const deleteVideo = (videoId, token) =>
