@@ -935,7 +935,7 @@ useEffect(() => {
     setVideoModalOpen(true)
   }
 
-  console.log('videoForm', videoForm)
+  // console.log('ABCD', {shouldShowAuth,isLoggedIn,activeView})
 
   const openEditVideoModal = (video) => {
     setVideoModalMode('edit')
@@ -1300,6 +1300,7 @@ useEffect(() => {
   const signedEmail = profile?.email ?? trimmedEmail
 
   const shouldShowAuth = !isLoggedIn && !isPublicView
+  console.log('ABCD', { shouldShowAuth, isLoggedIn, activeView })
 
   return (
     <div className="app-shell">

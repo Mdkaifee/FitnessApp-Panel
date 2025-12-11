@@ -93,7 +93,7 @@
   padding: clamp(24px, 4vw, 48px);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 0px;
   position: relative;
   z-index: 1;
 }
@@ -106,7 +106,7 @@
 
 .login-card__logo img {
   max-width: 200px;
-  height: auto;
+  height: 40px;
 }
 
 .login-card__intro {
