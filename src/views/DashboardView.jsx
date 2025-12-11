@@ -425,31 +425,45 @@ function DashboardView({
         onClose={() => setProfileModalOpen(false)}
         title="Account overview"
       >
-        <div className="profile-modal-header">
-          <div>
-            <h3>{fullName}</h3>
-            <p>{profile.email}</p>
-          </div>
-          {/* <button className="ghost-button" onClick={() => onRefresh?.()} aria-label="Refresh profile">
-            Refresh
-          </button> */}
-        </div>
-        <div className="profile-info-grid">
-          {infoRows.map((row) => (
-            <div key={row.label} className="profile-info-card">
-              <span className="label">{row.label}</span>
-              <span>{row.value ?? '—'}</span>
+        <div className="profile-modal">
+          <div className="profile-modal-header">
+            <div className="profile-identity">
+              <div className="profile-avatar profile-avatar--large">
+                {profile.photo ? (
+                  <img src={photoUrl} alt={fullName} />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </div>
+              <div>
+                <h3>{fullName}</h3>
+                <p>{profile.email}</p>
+              </div>
             </div>
-          ))}
-          <div className="profile-info-card">
-            <span className="label">Photo</span>
-            {profile.photo ? (
-              <a href={photoUrl} target="_blank" rel="noreferrer" className="link-button">
-                View photo
-              </a>
-            ) : (
-              <span>Not uploaded</span>
-            )}
+            <div className="profile-tags">
+              <span className={`profile-status-tag ${profile.is_active ? 'active' : 'inactive'}`}>
+                {profile.is_active ? 'Active' : 'Inactive'}
+              </span>
+              {profile.gender ? <span className="profile-status-tag subtle">{profile.gender}</span> : null}
+            </div>
+          </div>
+          <div className="profile-info-grid">
+            {infoRows.map((row) => (
+              <div key={row.label} className="profile-info-row">
+                <span className="profile-info-label">{row.label}</span>
+                <span className="profile-info-value">{row.value ?? '—'}</span>
+              </div>
+            ))}
+            <div className="profile-info-row profile-info-row--full">
+              <span className="profile-info-label">Photo</span>
+              {profile.photo ? (
+                <a href={photoUrl} target="_blank" rel="noreferrer" className="link-button">
+                  View photo
+                </a>
+              ) : (
+                <span className="profile-info-value">Not uploaded</span>
+              )}
+            </div>
           </div>
         </div>
       </Modal>
