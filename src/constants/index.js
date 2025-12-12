@@ -39,6 +39,8 @@ export const VIDEO_CATEGORIES = [
   { label: 'NewArms', value: 'NewArms' },
   { label: 'NewLegs', value: 'NewLegs' },
   { label: 'NewFullBody', value: 'NewFullBody' },
+  { label: 'Full Body Strength', value: 'FullBodyStrength' },
+  { label: 'Sport Nutrition', value: 'SportNutrition' },
 ]
 
 export const VIDEO_GENDERS = [

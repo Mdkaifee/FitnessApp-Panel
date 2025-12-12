@@ -30,6 +30,17 @@ function UsersView({
   }
 
   const list = usersData.users ?? []
+  const headerColumns = [
+    { label: '#', align: 'left' },
+    { label: 'Name', align: 'left' },
+    { label: 'Email', align: 'left' },
+    { label: 'Phone', align: 'left' },
+    { label: 'DOB', align: 'left' },
+    { label: 'Gender', align: 'left' },
+    { label: 'Status', align: 'center' },
+    { label: 'Photo', align: 'center' },
+    { label: 'Actions', align: 'right' },
+  ]
 
   return (
     <div className="panel users-table-panel">
@@ -49,15 +60,11 @@ function UsersView({
           <table className="data-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>DOB</th>
-                <th>Gender</th>
-                <th>Status</th>
-                <th>Photo</th>
-                <th>Actions</th>
+                {headerColumns.map((column) => (
+                <th key={column.label} className={`align-${column.align}`}>
+                  {column.label}
+                </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -67,8 +74,8 @@ function UsersView({
                 const isActionDisabled = statusPending === String(user.id) || isLoading
                 return (
                   <tr key={user.id}>
-                    <td>{index + 1}</td>
-                    <td>
+                    <td className="align-left">{index + 1}</td>
+                    <td className="align-left">
                       {onUserNameClick ? (
                         <button
                           type="button"
@@ -81,7 +88,7 @@ function UsersView({
                         fullName
                       )}
                     </td>
-                    <td>
+                    <td className="align-left">
                       {user.email ? (
                         <button
                           type="button"
@@ -94,16 +101,16 @@ function UsersView({
                         '—'
                       )}
                     </td>
-                    <td>{user.phone ?? '—'}</td>
-                    <td>{user.dob ?? '—'}</td>
-                    <td>{user.gender ?? '—'}</td>
-                    <td>
+                    <td className="align-left">{user.phone ?? '—'}</td>
+                    <td className="align-left">{user.dob ?? '—'}</td>
+                    <td className="align-left">{user.gender ?? '—'}</td>
+                    <td className="align-center">
                       <span className={`pill ${user.is_active ? 'success' : 'danger'}`}>
                       <span className="status-dot"></span>
                         {user.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td>
+                    <td className="align-center">
   {user.photo ? (
     <img
       src={buildMediaUrl(user.photo)}
@@ -115,7 +122,7 @@ function UsersView({
   )}
 </td>
 
-                    <td>
+                    <td className="align-right">
                       <button
                         type="button"
                         className="link-button"

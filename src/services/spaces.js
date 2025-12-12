@@ -103,6 +103,12 @@ const toArrayBufferBody = async (file) => {
   return file
 }
 
+const buildPlaceholderKey = (folder, basePath) => {
+  const normalizedFolder = trimSlashes(folder)
+  if (!normalizedFolder) return null
+  return [basePath, normalizedFolder, '.keep'].filter(Boolean).join('/')
+}
+
 export const uploadFileToSpaces = async (file, { folder = '' } = {}) => {
   if (!file) {
     throw new Error('No file provided for upload.')
@@ -123,6 +129,53 @@ export const uploadFileToSpaces = async (file, { folder = '' } = {}) => {
   await client.send(command)
   const url = buildPublicUrl(config, key)
   return { key, url }
+}
+
+export const ensureSpacesFolders = async (folders = []) => {
+  if (!Array.isArray(folders) || folders.length === 0) return
+  const config = getSpacesConfig()
+  const client = ensureClient(config)
+  const uniqueFolders = Array.from(
+    new Set(
+      folders
+        .map((folder) => trimSlashes(folder))
+        .filter((folder) => typeof folder === 'string' && folder.length > 0),
+    ),
+  )
+  if (uniqueFolders.length === 0) return
+  const placeholderBody = new Uint8Array()
+  console.info('[Spaces] Ensuring folders exist', { folders: uniqueFolders })
+  const results = await Promise.allSettled(
+    uniqueFolders.map(async (folder) => {
+      const key = buildPlaceholderKey(folder, config.basePath)
+      if (!key) return
+      const command = new PutObjectCommand({
+        Bucket: config.bucket,
+        Key: key,
+        Body: placeholderBody,
+        ACL: 'public-read',
+        ContentType: 'text/plain',
+      })
+      try {
+        await client.send(command)
+      } catch (error) {
+        console.error('Failed to ensure DigitalOcean Spaces folder', { folder, error })
+      }
+    }),
+  )
+  const summary = results.reduce(
+    (acc, result, index) => {
+      const target = uniqueFolders[index]
+      if (result.status === 'fulfilled') {
+        acc.success.push(target)
+      } else {
+        acc.failed.push({ folder: target, reason: result.reason?.message ?? 'Unknown error' })
+      }
+      return acc
+    },
+    { success: [], failed: [] },
+  )
+  console.info('[Spaces] Folder ensure summary', summary)
 }
 
 export const getSpacesConfigSummary = () => {

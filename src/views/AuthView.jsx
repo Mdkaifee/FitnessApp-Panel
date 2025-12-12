@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 
+const OTP_LENGTH = 6
+
 function AuthView({
   authStep,
   email,
-  otp,
+  otpDigits,
   flowHint,
   trimmedEmail,
   pendingAction,
@@ -16,10 +18,15 @@ function AuthView({
   onOtpChange,
   onBackToLogin,
 }) {
-  const otpInputRef = useRef(null)
-  const otpDigits = Array.from({ length: 6 }, (_, index) => otp[index] ?? '')
-  const cursorPosition = Math.min(otp.length, 5) // Ensure cursor stays within visible boxes
+  const otpInputRefs = useRef([])
+  const otpDigitsRef = useRef(otpDigits)
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const isOtpComplete = otpDigits.every((digit) => digit && digit.length > 0)
+
+  useEffect(() => {
+    otpDigitsRef.current = otpDigits
+  }, [otpDigits])
+
   const formatResendTime = () => {
     const minutes = Math.floor(resendSeconds / 60)
     const seconds = resendSeconds % 60
@@ -33,10 +40,116 @@ function AuthView({
   }, [authStep])
 
   useEffect(() => {
-    if (authStep === 'otp') {
-      otpInputRef.current?.focus()
-    }
+    if (authStep !== 'otp') return
+    const digits = otpDigitsRef.current
+    const emptyIndex = digits.findIndex((digit) => !digit)
+    const targetIndex = emptyIndex === -1 ? OTP_LENGTH - 1 : emptyIndex
+    const targetInput = otpInputRefs.current[targetIndex]
+    targetInput?.focus()
+    targetInput?.select()
   }, [authStep])
+
+  const focusDigitAt = (index) => {
+    const clampedIndex = Math.max(0, Math.min(index, OTP_LENGTH - 1))
+    const input = otpInputRefs.current[clampedIndex]
+    if (input) {
+      input.focus()
+      input.select()
+    }
+  }
+
+  const focusFirstEmptyDigit = () => {
+    const emptyIndex = otpDigits.findIndex((digit) => !digit)
+    const targetIndex = emptyIndex === -1 ? OTP_LENGTH - 1 : emptyIndex
+    focusDigitAt(targetIndex)
+  }
+
+  const applyDigitSequence = (startIndex, sequence) => {
+    if (!sequence) return
+    const sanitizedSequence = sequence.replace(/\D/g, '')
+    if (!sanitizedSequence) return
+    const nextDigits = [...otpDigits]
+    let cursor = Math.max(0, Math.min(startIndex, OTP_LENGTH - 1))
+    for (const char of sanitizedSequence) {
+      if (cursor >= OTP_LENGTH) break
+      nextDigits[cursor] = char
+      cursor += 1
+    }
+    onOtpChange(nextDigits)
+    if (cursor < OTP_LENGTH) {
+      focusDigitAt(cursor)
+    }
+  }
+
+  const handleOtpDigitChange = (index, rawValue) => {
+    const sanitized = rawValue.replace(/\D/g, '')
+    if (!sanitized) {
+      const nextDigits = [...otpDigits]
+      nextDigits[index] = ''
+      onOtpChange(nextDigits)
+      return
+    }
+    applyDigitSequence(index, sanitized)
+  }
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === 'Backspace') {
+      event.preventDefault()
+      if (otpDigits[index]) {
+        const nextDigits = [...otpDigits]
+        nextDigits[index] = ''
+        onOtpChange(nextDigits)
+      } else if (index > 0) {
+        focusDigitAt(index - 1)
+        const nextDigits = [...otpDigits]
+        nextDigits[index - 1] = ''
+        onOtpChange(nextDigits)
+      }
+      return
+    }
+    if (event.key === 'Delete') {
+      event.preventDefault()
+      if (otpDigits[index]) {
+        const nextDigits = [...otpDigits]
+        nextDigits[index] = ''
+        onOtpChange(nextDigits)
+      }
+      return
+    }
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      focusDigitAt(index - 1)
+      return
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      focusDigitAt(index + 1)
+      return
+    }
+    if (event.key === 'Enter') {
+      if (trimmedEmail && isOtpComplete && pendingAction !== 'verify') {
+        event.preventDefault()
+        onVerifyOtp()
+      }
+    }
+  }
+
+  const handleOtpPaste = (event) => {
+    if (authStep !== 'otp') return
+    event.preventDefault()
+    const pasted = event.clipboardData.getData('text').replace(/\D/g, '')
+    if (!pasted) return
+    const activeElement = document.activeElement
+    const activeIndex = otpInputRefs.current.findIndex((input) => input === activeElement)
+    const startIndex = activeIndex === -1 ? 0 : activeIndex
+    applyDigitSequence(startIndex, pasted)
+  }
+
+  const handleOtpWrapperClick = (event) => {
+    if (event.target === event.currentTarget) {
+      focusFirstEmptyDigit()
+    }
+  }
 
   return (
     <section className="auth-hero">
@@ -93,34 +206,32 @@ function AuthView({
           ) : (
             <div className="otp-panel">
               <label className="otp-label">Enter OTP</label>
-              <div className="otp-box-wrapper" onClick={() => otpInputRef.current?.focus()}>
+              <div className="otp-box-wrapper" onClick={handleOtpWrapperClick} onPaste={handleOtpPaste}>
                 <div className="otp-boxes">
                   {otpDigits.map((digit, index) => (
-                    <span key={index} className={`otp-box ${digit ? 'filled' : ''} ${index === cursorPosition ? 'cursor' : ''}`}>
-                      {digit || (index === cursorPosition ? '|' : '')}
-                    </span>
+                    <input
+                      key={index}
+                      ref={(element) => {
+                        otpInputRefs.current[index] = element
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="\d*"
+                      maxLength={1}
+                      className={`otp-digit-input${digit ? ' filled' : ''}`}
+                      value={digit}
+                      onChange={(event) => handleOtpDigitChange(index, event.target.value)}
+                      onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                      onFocus={(event) => event.target.select()}
+                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                    />
                   ))}
                 </div>
-                <input
-                  ref={otpInputRef}
-                  type="text"
-                  inputMode="numeric"
-                  className="otp-hidden-input"
-                  value={otp}
-                  onChange={(event) => onOtpChange(event.target.value)}
-                  maxLength={6}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && otp.length === 6 && trimmedEmail && pendingAction !== 'verify') {
-                      event.preventDefault()
-                      onVerifyOtp()
-                    }
-                  }}
-                />
               </div>
               <button
                 className="login-button"
                 onClick={onVerifyOtp}
-                disabled={!trimmedEmail || otp.length < 6 || pendingAction === 'verify'}
+                disabled={!trimmedEmail || !isOtpComplete || pendingAction === 'verify'}
               >
                 {pendingAction === 'verify' ? 'Verifying…' : 'Verify & Login'}
               </button>

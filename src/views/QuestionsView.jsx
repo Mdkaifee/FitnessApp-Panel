@@ -148,14 +148,14 @@ function QuestionsView({
                 </small>
               </div>
               <div className="question-actions">
-                <button
+                {/* <button
                   className="question-icon-button"
                   type="button"
                   onClick={() => onEditQuestion(question)}
                   title="Edit question"
                 >
                   <img src={editIcon} alt="Edit question" />
-                </button>
+                </button> */}
                 <button
                   className="question-icon-button danger"
                   type="button"

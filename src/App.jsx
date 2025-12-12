@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   requestOtp,
   resendOtp,
@@ -22,7 +22,7 @@ import {
   updateSubscriptionPlan,
   deleteSubscriptionPlan,
 } from './services/api'
-import { uploadFileToSpaces } from './services/spaces'
+import { uploadFileToSpaces, ensureSpacesFolders } from './services/spaces'
 import './App.css'
 import {
   ACTIVE_VIEW_KEY,
@@ -76,6 +76,21 @@ const getDefaultVideoForm = () => ({
   videoFile: null,
   thumbnailFile: null,
 })
+
+const getVideoUploadFolder = (bodyPart) => {
+  if (typeof bodyPart === 'string' && bodyPart.trim()) {
+    return bodyPart.trim()
+  }
+  return 'videos'
+}
+
+const getThumbnailUploadFolder = (bodyPart) => {
+  const base = getVideoUploadFolder(bodyPart)
+  return base ? `${base}/thumbnails` : 'thumbnails'
+}
+
+const OTP_LENGTH = 6
+const getEmptyOtpDigits = () => Array(OTP_LENGTH).fill('')
 
 const getDefaultPlanForm = () => ({
   id: '',
@@ -158,8 +173,9 @@ const formatAnalyticsRangeLabel = (range) => {
 }
 
 function App() {
+  const ensuredCategoryFoldersRef = useRef(false)
   const [email, setEmail] = useState(getInitialEmail)
-  const [otp, setOtp] = useState('')
+  const [otpDigits, setOtpDigits] = useState(getEmptyOtpDigits)
   const [authStep, setAuthStep] = useState(getInitialAuthStep)
   const [flowHint, setFlowHint] = useState(null)
   const [token, setToken] = useState(() => getInitialToken())
@@ -183,6 +199,7 @@ function App() {
   const [pendingAction, setPendingAction] = useState('')
   const [resendSeconds, setResendSeconds] = useState(0)
   const [hasRequestedOtp, setHasRequestedOtp] = useState(false)
+  const otpValue = useMemo(() => otpDigits.join(''), [otpDigits])
   const [videoCategory, setVideoCategory] = useState(ALL_VIDEOS_CATEGORY)
   const [videoGender, setVideoGender] = useState('All')
   const [videosData, setVideosData] = useState(null)
@@ -201,6 +218,32 @@ function App() {
     gender: '',
     status: '',
   })
+
+  useEffect(() => {
+    if (ensuredCategoryFoldersRef.current) return
+    let isActive = true
+    const ensureFolders = async () => {
+      try {
+        const folders = VIDEO_CATEGORIES.flatMap((category) => {
+          if (!category?.value || typeof category.value !== 'string') return []
+          const trimmed = category.value.trim()
+          if (!trimmed) return []
+          return [trimmed, `${trimmed}/thumbnails`]
+        })
+        await ensureSpacesFolders(folders)
+      } catch (error) {
+        console.error('Failed to ensure Spaces category folders', error)
+      } finally {
+        if (isActive) {
+          ensuredCategoryFoldersRef.current = true
+        }
+      }
+    }
+    ensureFolders()
+    return () => {
+      isActive = false
+    }
+  }, [])
   const [questionPending, setQuestionPending] = useState('')
   const [questionForm, setQuestionForm] = useState({
     id: '',
@@ -848,14 +891,14 @@ useEffect(() => {
   }
 
   const handleVerifyOtp = async () => {
-    if (!trimmedEmail || otp.length < 6) {
+    if (!trimmedEmail || otpDigits.some((digit) => !digit)) {
       setStatus({ type: 'error', text: 'Enter your email and the 6-digit OTP.' })
       return
     }
     setPendingAction('verify')
     setStatus(null)
     try {
-      const response = await verifyOtp(trimmedEmail, otp)
+      const response = await verifyOtp(trimmedEmail, otpValue)
       const accessToken = response?.data?.access_token
       if (!accessToken) {
         throw new Error('No access token returned.')
@@ -865,7 +908,7 @@ useEffect(() => {
       setActiveView('dashboard')
       safeSetInStorage(ACTIVE_VIEW_KEY, 'dashboard')
       setStatus({ type: 'success', text: response?.message ?? 'OTP verified successfully.' })
-      setOtp('')
+      setOtpDigits(getEmptyOtpDigits())
       await loadProfile(accessToken)
     } catch (error) {
       handleApiError(error)
@@ -887,13 +930,20 @@ useEffect(() => {
       resetSession()
       setFlowHint(null)
       setEmail('')
-      setOtp('')
+      setOtpDigits(getEmptyOtpDigits())
     }
   }
 
-  const handleOtpChange = (value) => {
-    const numericValue = value.replace(/\D/g, '').slice(0, 6)
-    setOtp(numericValue)
+  const handleOtpChange = (digits) => {
+    if (!Array.isArray(digits)) return
+    setOtpDigits(
+      Array.from({ length: OTP_LENGTH }, (_, index) => {
+        const value = digits[index]
+        if (typeof value !== 'string') return ''
+        const numericChar = value.replace(/\D/g, '')
+        return numericChar ? numericChar.slice(-1) : ''
+      }),
+    )
   }
 
   const videoPageCount = videosData?.pageCount ?? Math.max(1, Math.ceil(Math.max(videosData?.total ?? 0, 0) / VIDEO_PAGE_SIZE))
@@ -970,9 +1020,11 @@ useEffect(() => {
       }
       setVideoPending('upload')
       try {
+        const videoFolder = getVideoUploadFolder(videoForm.bodyPart)
+        const thumbnailFolder = getThumbnailUploadFolder(videoForm.bodyPart)
         const [uploadedVideo, uploadedThumbnail] = await Promise.all([
-          uploadFileToSpaces(videoForm.videoFile, { folder: 'videos' }),
-          uploadFileToSpaces(videoForm.thumbnailFile, { folder: 'thumbnails' }),
+          uploadFileToSpaces(videoForm.videoFile, { folder: videoFolder }),
+          uploadFileToSpaces(videoForm.thumbnailFile, { folder: thumbnailFolder }),
         ])
         const payload = {
           body_part: videoForm.bodyPart,
@@ -1016,12 +1068,14 @@ useEffect(() => {
       if (trimmedDescription) {
         payload.description = trimmedDescription
       }
+      const videoFolder = getVideoUploadFolder(videoForm.bodyPart)
+      const thumbnailFolder = getThumbnailUploadFolder(videoForm.bodyPart)
       if (videoForm.videoFile) {
-        const { url } = await uploadFileToSpaces(videoForm.videoFile, { folder: 'videos' })
+        const { url } = await uploadFileToSpaces(videoForm.videoFile, { folder: videoFolder })
         payload.video_url = url
       }
       if (videoForm.thumbnailFile) {
-        const { url } = await uploadFileToSpaces(videoForm.thumbnailFile, { folder: 'thumbnails' })
+        const { url } = await uploadFileToSpaces(videoForm.thumbnailFile, { folder: thumbnailFolder })
         payload.thumbnail_url = url
       }
 
@@ -1291,7 +1345,7 @@ useEffect(() => {
 
   const handleBackToLoginStep = () => {
     navigateAuthStep('login')
-    setOtp('')
+    setOtpDigits(getEmptyOtpDigits())
     setHasRequestedOtp(false)
     setResendSeconds(0)
     setStatus({ type: 'info', text: 'Enter a new email address to request another OTP.' })
@@ -1308,7 +1362,7 @@ useEffect(() => {
         <AuthView
           authStep={authStep}
           email={email}
-          otp={otp}
+          otpDigits={otpDigits}
           flowHint={flowHint}
           trimmedEmail={trimmedEmail}
           pendingAction={pendingAction}

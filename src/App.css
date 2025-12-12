@@ -411,32 +411,32 @@
 .otp-boxes {
   display: flex;
   gap: 10px;
+  justify-content: center;
 }
 
-.otp-box {
-  width: 44px;
-  height: 56px;
-  border-bottom: 2px solid #d3d8f5;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  font-size: 1.4rem;
+.otp-digit-input {
+  width: 48px;
+  height: 58px;
+  border: 2px solid #d3d8f5;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 1.5rem;
   font-weight: 600;
   color: #0f172a;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.otp-box.filled {
+.otp-digit-input:focus {
   border-color: #ec4899;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
+  outline: none;
+  background: rgba(236, 72, 153, 0.1);
 }
 
-.otp-hidden-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.otp-box.cursor {
+.otp-digit-input.filled {
   border-color: #ec4899;
+  background: rgba(236, 72, 153, 0.08);
 }
 
 .field {
@@ -3496,7 +3496,7 @@ button.primary.slim {
 
 .question-option-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) 120px 40px;
+  grid-template-columns: repeat(2, minmax(160px, 1fr)) auto;
   gap: 16px;
   align-items: center;
 }
@@ -3833,6 +3833,21 @@ button.primary.slim {
   padding: 16px;
   font-size: 13px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.data-table th.align-left,
+.data-table td.align-left {
+  text-align: left;
+}
+
+.data-table th.align-center,
+.data-table td.align-center {
+  text-align: center;
+}
+
+.data-table th.align-right,
+.data-table td.align-right {
+  text-align: right;
 }
 
 
