@@ -47,4 +47,10 @@ export default defineConfig({
     allowedHosts: ['*'],
     proxy: proxyConfig,
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/setupTests.js',
+    clearMocks: true,
+  },
 })
