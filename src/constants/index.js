@@ -35,12 +35,12 @@ export const GENDER_ALL_LABEL = 'All'
 export const GENDER_API_BOTH = 'Both'
 
 export const VIDEO_CATEGORIES = [
-  { label: 'NewCore', value: 'NewCore' },
-  { label: 'NewArms', value: 'NewArms' },
-  { label: 'NewLegs', value: 'NewLegs' },
-  { label: 'NewFullBody', value: 'NewFullBody' },
-  { label: 'Full Body Strength', value: 'FullBodyStrength' },
-  { label: 'Sport Nutrition', value: 'SportNutrition' },
+  { label: 'Cores', value: 'Core' },
+  { label: 'Arms', value: 'Arms' },
+  { label: 'Legs', value: 'Legs' },
+  { label: 'Full Body', value: 'FullBody' },
+  { label: 'Full Body Strength(20 min Video)', value: 'FullBodyStrength' },
+  { label: 'Sport Nutrition(20 min Video)', value: 'SportNutrition' },
 ]
 
 export const VIDEO_GENDERS = [
