@@ -1091,7 +1091,6 @@ useEffect(() => {
   }
 
   const handleDeleteVideo = async (videoId) => {
-    if (!window.confirm('Remove this video?')) return
     setVideoPending(`delete-${videoId}`)
     try {
       const response = await deleteVideo(videoId, token)

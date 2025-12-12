@@ -1,7 +1,8 @@
 import Modal from '../shared/Modal'
 import { ANSWER_TYPES, GENDER_ALL_LABEL } from '../../constants'
 
-const isChoiceType = (type) => type === 'single_choice' || type === 'multi_choice'
+const FREE_FORM_TYPES = new Set(['text', 'number', 'date'])
+const isChoiceType = (type) => Boolean(type) && !FREE_FORM_TYPES.has(type)
 
 function QuestionModal({
   open,
@@ -17,10 +18,10 @@ function QuestionModal({
 }) {
   if (!open) return null
 
-  const choiceType = isChoiceType(form.answerType)
-  const showOptions = Boolean(form.answerType)
+  const showOptions = isChoiceType(form.answerType)
   const hasQuestion = form.question.trim().length > 0 && form.answerType
-  const hasOptions = !choiceType || form.options.some((option) => option.optionText.trim().length > 0)
+  const hasOptions =
+    !showOptions || form.options.some((option) => option.optionText.trim().length > 0)
   const ready = hasQuestion && hasOptions
 
   const handleSubmit = (event) => {
@@ -98,14 +99,14 @@ function QuestionModal({
               </label>
             </div>
             <div className="question-checkbox-row">
-              <label className="question-checkbox">
+              {/* <label className="question-checkbox">
                 <input
                   type="checkbox"
                   checked={form.isRequired}
                   onChange={(event) => setForm((prev) => ({ ...prev, isRequired: event.target.checked }))}
                 />
                 <span>Required</span>
-              </label>
+              </label> */}
               <label className="question-checkbox">
                 <input
                   type="checkbox"
@@ -117,12 +118,12 @@ function QuestionModal({
             </div>
           </section>
 
-          {showOptions && (
+          {showOptions ? (
             <section className="question-section">
               <div className="question-section-head question-section-head--options">
                 <div>
-                  <h4>Question (Optional)</h4>
-                  <p>Add toggle values if you need them for this question.</p>
+                  <h4>Options Shown to Users</h4>
+                  <p>Enter at least one choice—users must pick from these options for this answer type.</p>
                 </div>
                 <button type="button" className="question-add-option" onClick={addOptionField}>
                   <span aria-hidden="true">＋</span> Add Option
@@ -170,6 +171,13 @@ function QuestionModal({
                   </div>
                 ))}
               </div>
+            </section>
+          ) : (
+            <section className="question-section question-section--info">
+              <p className="question-placeholder-note">
+                Options are not needed for this answer type. Users will simply type their response
+                for this question in the app.
+              </p>
             </section>
           )}
 

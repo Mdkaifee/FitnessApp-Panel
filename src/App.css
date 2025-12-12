@@ -3441,6 +3441,16 @@ button.primary.slim {
   justify-content: space-between;
 }
 
+.question-section--info {
+  padding: 16px;
+  background: rgba(236, 72, 153, 0.08);
+  border: 1px dashed rgba(236, 72, 153, 0.4);
+  border-radius: 14px;
+  color: #be185d;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+
 .question-field-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

@@ -57,5 +57,4 @@ export const ANSWER_TYPES = [
   { label: 'Date', value: 'date' },
   { label: 'Weight', value: 'weight' },
   { label: 'Height', value: 'height' },
-  { label: 'Other', value: 'other' },
 ]
