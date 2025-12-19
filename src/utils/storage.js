@@ -36,10 +36,14 @@ export const safeRemoveFromStorage = (key) => {
 export const getInitialToken = () => safeGetFromStorage(TOKEN_KEY) ?? ''
 
 export const getInitialActiveView = () => {
+  const normalizeView = (view) => {
+    if (view === 'subscription') return 'programs'
+    return view
+  }
   const storedToken = safeGetFromStorage(TOKEN_KEY)
   const hasToken = Boolean(storedToken)
   if (typeof window !== 'undefined') {
-    const pathView = ROUTE_TO_WORKSPACE_VIEW[window.location.pathname]
+    const pathView = normalizeView(ROUTE_TO_WORKSPACE_VIEW[window.location.pathname])
     if (pathView) {
       if (hasToken && WORKSPACE_VIEWS.has(pathView)) {
         return pathView
@@ -50,6 +54,6 @@ export const getInitialActiveView = () => {
     }
   }
   if (!hasToken) return 'login'
-  const storedView = safeGetFromStorage(ACTIVE_VIEW_KEY)
+  const storedView = normalizeView(safeGetFromStorage(ACTIVE_VIEW_KEY))
   return storedView && WORKSPACE_VIEWS.has(storedView) ? storedView : 'dashboard'
 }

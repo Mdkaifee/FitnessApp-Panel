@@ -2,6 +2,26 @@ import { getApiBaseUrl } from '../utils/apiBase'
 
 const API_BASE_URL = getApiBaseUrl()
 
+const extractErrorMessage = (payload) => {
+  if (payload == null) return null;
+  if (typeof payload === 'string') return payload;
+  if (Array.isArray(payload)) {
+    const parts = payload
+      .map((item) => extractErrorMessage(item?.msg ?? item?.message ?? item?.detail ?? item))
+      .filter(Boolean);
+    return parts.length ? parts.join(' · ') : null;
+  }
+  if (typeof payload === 'object') {
+    return (
+      extractErrorMessage(payload.message) ??
+      extractErrorMessage(payload.detail) ??
+      extractErrorMessage(payload.msg) ??
+      extractErrorMessage(payload.error)
+    );
+  }
+  return String(payload);
+};
+
 async function apiRequest(path, { method = 'GET', body, token, isFormData = false } = {}) {
   const url = `${API_BASE_URL}${path}`
   const headers = {}
@@ -20,7 +40,7 @@ async function apiRequest(path, { method = 'GET', body, token, isFormData = fals
 
   const data = await response.json().catch(() => null)
   if (!response.ok) {
-    const message = data?.message ?? data?.detail ?? 'Request failed'
+    const message = extractErrorMessage(data) || response.statusText || 'Request failed'
     const error = new Error(message)
     error.status = response.status
     throw error
@@ -158,35 +178,91 @@ export const fetchUserAnalytics = (userId, days = 7, token) => {
   return apiRequest(`/admin/users/analytics?${params.toString()}`, { token })
 }
 
-export const fetchSubscriptionPlans = ({ includeInactive = false, status = '' } = {}, token) => {
+export const fetchPrograms = ({ includeInactive = true, access = '' } = {}, token) => {
   const params = new URLSearchParams()
-  if (status) {
-    params.append('status', status)
-  }
   if (includeInactive) {
     params.append('include_inactive', 'true')
   }
+  if (access) {
+    params.append('access', access)
+  }
   const query = params.toString()
   const suffix = query ? `?${query}` : ''
-  return apiRequest(`/plans/admin${suffix}`, { token })
+  return apiRequest(`/programs/admin${suffix}`, { token })
 }
 
-export const createSubscriptionPlan = (payload, token) =>
-  apiRequest('/plans/admin', {
+export const createProgram = (payload, token) =>
+  apiRequest('/programs/admin', {
     method: 'POST',
     body: payload,
     token,
   })
 
-export const updateSubscriptionPlan = (planId, payload, token) =>
-  apiRequest(`/plans/admin/${planId}`, {
+export const updateProgram = (programIdOrSlug, payload, token) =>
+  apiRequest(`/programs/admin/${programIdOrSlug}`, {
     method: 'PUT',
     body: payload,
     token,
   })
 
-export const deleteSubscriptionPlan = (planId, token) =>
-  apiRequest(`/plans/admin/${planId}`, {
+export const deleteProgram = (programIdOrSlug, token) =>
+  apiRequest(`/programs/admin/${programIdOrSlug}`, {
+    method: 'DELETE',
+    token,
+  })
+
+export const fetchFoodCategoriesAdmin = (token, { includeInactive = true } = {}) => {
+  const query = includeInactive ? '?include_inactive=true' : '?include_inactive=false'
+  return apiRequest(`/nutrition/admin/categories${query}`, { token })
+}
+
+export const createFoodCategory = (payload, token) =>
+  apiRequest('/nutrition/admin/categories', {
+    method: 'POST',
+    body: payload,
+    token,
+  })
+
+export const updateFoodCategory = (categoryId, payload, token) =>
+  apiRequest(`/nutrition/admin/categories/${categoryId}`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
+export const archiveFoodCategory = (categoryId, token) =>
+  apiRequest(`/nutrition/admin/categories/${categoryId}`, {
+    method: 'DELETE',
+    token,
+  })
+
+export const fetchFoodsAdmin = ({ search = '', categoryId = '', includeInactive = true, page = 1, pageSize = 50 } = {}, token) => {
+  const params = new URLSearchParams()
+  params.append('page', String(page))
+  params.append('page_size', String(pageSize))
+  if (search.trim()) params.append('search', search.trim())
+  if (categoryId) params.append('category_id', String(categoryId))
+  if (!includeInactive) params.append('include_inactive', 'false')
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return apiRequest(`/nutrition/admin/foods${query}`, { token })
+}
+
+export const createFood = (payload, token) =>
+  apiRequest('/nutrition/admin/foods', {
+    method: 'POST',
+    body: payload,
+    token,
+  })
+
+export const updateFood = (foodId, payload, token) =>
+  apiRequest(`/nutrition/admin/foods/${foodId}`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
+export const archiveFood = (foodId, token) =>
+  apiRequest(`/nutrition/admin/foods/${foodId}`, {
     method: 'DELETE',
     token,
   })

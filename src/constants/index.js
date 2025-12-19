@@ -6,7 +6,8 @@ export const WORKSPACE_VIEWS = new Set([
   'users',
   'videos',
   'questions',
-  'subscription',
+  'programs',
+  'foods',
   'privacyPolicy',
   'deleteAccount',
 ])
@@ -18,7 +19,8 @@ export const WORKSPACE_VIEW_ROUTES = {
   users: '/users',
   videos: '/videos',
   questions: '/questions',
-  subscription: '/subscription',
+  programs: '/programs',
+  foods: '/foods',
   privacyPolicy: '/privacy-policy',
   deleteAccount: '/delete-account',
 }
@@ -30,6 +32,8 @@ export const ROUTE_TO_WORKSPACE_VIEW = Object.entries(WORKSPACE_VIEW_ROUTES).red
   },
   {},
 )
+
+ROUTE_TO_WORKSPACE_VIEW['/subscription'] = 'programs'
 
 export const GENDER_ALL_LABEL = 'All'
 export const GENDER_API_BOTH = 'Both'

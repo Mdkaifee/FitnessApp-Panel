@@ -6,7 +6,8 @@ const NAV_ITEMS = [
   { id: 'users', label: 'Users', icon: '/user.png' },
   { id: 'videos', label: 'Videos', icon: '/video.png' },
   { id: 'questions', label: 'Questions', icon: '/question.png' },
-  { id: 'subscription', label: 'Subscription', icon: '/plan.png' },
+  { id: 'programs', label: 'Programs', icon: '/plan.png' },
+  { id: 'foods', label: 'Foods', icon: '/food.png' },
 ]
 
 

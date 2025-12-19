@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Swal from 'sweetalert2'
 import {
   requestOtp,
   resendOtp,
@@ -17,10 +18,18 @@ import {
   updateUserStatus,
   fetchUserAnalytics,
   fetchDashboardMetrics,
-  fetchSubscriptionPlans,
-  createSubscriptionPlan,
-  updateSubscriptionPlan,
-  deleteSubscriptionPlan,
+  fetchPrograms,
+  createProgram,
+  updateProgram,
+  deleteProgram,
+  fetchFoodCategoriesAdmin,
+  createFoodCategory,
+  updateFoodCategory,
+  archiveFoodCategory,
+  fetchFoodsAdmin,
+  createFood,
+  updateFood,
+  archiveFood,
 } from './services/api'
 import { uploadFileToSpaces, ensureSpacesFolders } from './services/spaces'
 import './App.css'
@@ -49,7 +58,8 @@ import DashboardView from './views/DashboardView'
 import UsersView from './views/UsersView'
 import VideosView, { ALL_VIDEOS_CATEGORY } from './views/VideosView'
 import QuestionsView from './views/QuestionsView'
-import SubscriptionView from './views/SubscriptionView'
+import ProgramsView from './views/ProgramsView'
+import FoodsView from './views/FoodsView'
 import PrivacyPolicyView from './views/PrivacyPolicyView'
 import DeleteAccountView from './views/DeleteAccountView'
 import Sidebar from './components/layout/Sidebar'
@@ -57,7 +67,9 @@ import StatusBanner from './components/shared/StatusBanner'
 import VideoModal from './components/modals/VideoModal'
 import QuestionModal from './components/modals/QuestionModal'
 import UserAnalyticsModal from './components/modals/UserAnalyticsModal'
-import PlanModal from './components/modals/PlanModal'
+import ProgramModal from './components/modals/ProgramModal'
+import FoodModal from './components/modals/FoodModal'
+import FoodCategoryModal from './components/modals/FoodCategoryModal'
 // import { createLogger } from 'vite'
 
 const getInitialEmail = () => safeGetFromStorage(AUTH_EMAIL_KEY) ?? ''
@@ -92,48 +104,124 @@ const getThumbnailUploadFolder = (bodyPart) => {
 const OTP_LENGTH = 6
 const getEmptyOtpDigits = () => Array(OTP_LENGTH).fill('')
 
-const getDefaultPlanForm = () => ({
+const getDefaultProgramForm = () => ({
   id: '',
-  durationMonths: '12',
-  originalPrice: '',
-  discountedPrice: '',
+  slug: '',
+  title: '',
+  subtitle: '',
+  description: '',
+  durationDays: '28',
+  workoutsPerWeek: '5',
+  restDaysPerWeek: '2',
+  level: '',
+  accessLevel: 'free',
+  ctaLabel: '',
   isActive: true,
 })
 
-const parseCurrencyValue = (value) => {
-  const parsed = parseFloat(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
+const getDefaultFoodForm = () => ({
+  id: '',
+  name: '',
+  brand: '',
+  calories: '',
+  protein: '',
+  carbs: '',
+  fat: '',
+  servingQuantity: '',
+  servingUnit: 'serving',
+  categoryId: '',
+  isActive: true,
+})
+
+const getDefaultCategoryForm = () => ({
+  id: '',
+  name: '',
+  slug: '',
+  description: '',
+  sortOrder: '0',
+  isActive: true,
+})
 
 const parseIntValue = (value) => {
   const parsed = parseInt(value, 10)
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-const buildPlanPayload = (form) => ({
-  duration_months: parseIntValue(form.durationMonths),
-  original_price: parseCurrencyValue(form.originalPrice),
-  discounted_price: parseCurrencyValue(form.discountedPrice),
+const normalizeProgramSlug = (slug, fallbackTitle) => {
+  const source = slug?.trim() || fallbackTitle?.trim() || ''
+  if (!source) return ''
+  return source
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
+const sanitizeString = (value) => {
+  if (typeof value === 'string') return value
+  if (value == null) return ''
+  return String(value)
+}
+
+const buildProgramPayload = (form) => ({
+  slug: normalizeProgramSlug(form.slug, form.title),
+  title: sanitizeString(form.title).trim(),
+  subtitle: sanitizeString(form.subtitle).trim() || null,
+  description: sanitizeString(form.description).trim() || null,
+  duration_days: parseIntValue(form.durationDays),
+  workouts_per_week: parseIntValue(form.workoutsPerWeek),
+  rest_days_per_week: parseIntValue(form.restDaysPerWeek),
+  level: sanitizeString(form.level).trim() || null,
+  access_level: form.accessLevel === 'paid' ? 'paid' : 'free',
+  cta_label: sanitizeString(form.ctaLabel).trim() || null,
   is_active: Boolean(form.isActive),
 })
 
-const buildPlanPayloadFromRecord = (plan, overrides = {}) => ({
-  duration_months: parseIntValue(
-    overrides.durationMonths ?? overrides.duration_months ?? plan?.duration_months ?? plan?.durationMonths ?? 0,
-  ),
-  original_price: parseCurrencyValue(
-    overrides.originalPrice ?? overrides.original_price ?? plan?.original_price ?? plan?.originalPrice ?? 0,
-  ),
-  discounted_price: parseCurrencyValue(
-    overrides.discountedPrice ?? overrides.discounted_price ?? plan?.discounted_price ?? plan?.discountedPrice ?? 0,
-  ),
-  is_active:
-    typeof overrides.isActive === 'boolean'
-      ? overrides.isActive
-      : typeof overrides.is_active === 'boolean'
-        ? overrides.is_active
-        : Boolean(plan?.is_active ?? plan?.isActive ?? true),
-})
+const buildProgramPayloadFromRecord = (program, overrides = {}) => {
+  const nextAccess =
+    overrides.accessLevel ??
+    overrides.access_level ??
+    program?.access_level ??
+    program?.accessLevel ??
+    'free'
+  const nextSubtitle = sanitizeString(overrides.subtitle ?? program?.subtitle ?? '').trim()
+  const nextDescription = sanitizeString(overrides.description ?? program?.description ?? '').trim()
+  const nextLevel = sanitizeString(overrides.level ?? program?.level ?? '').trim()
+  const nextCta = sanitizeString(overrides.ctaLabel ?? program?.cta_label ?? program?.ctaLabel ?? '').trim()
+  return {
+    slug: normalizeProgramSlug(
+      overrides.slug ?? program?.slug ?? '',
+      overrides.title ?? program?.title ?? '',
+    ),
+    title: sanitizeString(overrides.title ?? program?.title ?? ''),
+    subtitle: nextSubtitle || null,
+    description: nextDescription || null,
+    duration_days: parseIntValue(
+      overrides.durationDays ?? overrides.duration_days ?? program?.duration_days ?? 0,
+    ),
+    workouts_per_week: parseIntValue(
+      overrides.workoutsPerWeek ??
+        overrides.workouts_per_week ??
+        program?.workouts_per_week ??
+        0,
+    ),
+    rest_days_per_week: parseIntValue(
+      overrides.restDaysPerWeek ??
+        overrides.rest_days_per_week ??
+        program?.rest_days_per_week ??
+        0,
+    ),
+    level: nextLevel || null,
+    access_level: nextAccess === 'paid' ? 'paid' : 'free',
+    cta_label: nextCta || null,
+    is_active:
+      typeof overrides.isActive === 'boolean'
+        ? overrides.isActive
+        : typeof overrides.is_active === 'boolean'
+          ? overrides.is_active
+          : Boolean(program?.is_active ?? program?.isActive ?? true),
+  }
+}
 
 const deriveCategoryCountsFromVideos = (videos) => {
   if (!Array.isArray(videos) || videos.length === 0) return null
@@ -256,14 +344,31 @@ function App() {
     options: [{ id: '', optionText: '', value: '', isActive: true }],
   })
   const [isQuestionModalOpen, setQuestionModalOpen] = useState(false)
-  const [plans, setPlans] = useState([])
-  const [plansLoading, setPlansLoading] = useState(false)
-  const [plansError, setPlansError] = useState('')
-  const [planStatusFilter, setPlanStatusFilter] = useState('active')
-  const [planPending, setPlanPending] = useState('')
-  const [planModalMode, setPlanModalMode] = useState('create')
-  const [isPlanModalOpen, setPlanModalOpen] = useState(false)
-  const [planForm, setPlanForm] = useState(getDefaultPlanForm)
+  const [programs, setPrograms] = useState([])
+  const [programsLoading, setProgramsLoading] = useState(false)
+  const [programsError, setProgramsError] = useState('')
+  const [programPending, setProgramPending] = useState('')
+  const [programModalMode, setProgramModalMode] = useState('create')
+  const [isProgramModalOpen, setProgramModalOpen] = useState(false)
+  const [programForm, setProgramForm] = useState(getDefaultProgramForm)
+  const [foodsData, setFoodsData] = useState({ items: [], total: 0, page: 1, pageSize: 50 })
+  const [foodsLoading, setFoodsLoading] = useState(false)
+  const [foodsError, setFoodsError] = useState('')
+  const [foodFilters, setFoodFilters] = useState({
+    search: '',
+    categoryId: '',
+    includeInactive: false,
+  })
+  const [foodModalMode, setFoodModalMode] = useState('create')
+  const [isFoodModalOpen, setFoodModalOpen] = useState(false)
+  const [foodForm, setFoodForm] = useState(getDefaultFoodForm)
+  const [foodPending, setFoodPending] = useState(false)
+  const [foodCategories, setFoodCategories] = useState([])
+  const [foodCategoriesLoading, setFoodCategoriesLoading] = useState(false)
+  const [categoryModalMode, setCategoryModalMode] = useState('create')
+  const [isCategoryModalOpen, setCategoryModalOpen] = useState(false)
+  const [categoryForm, setCategoryForm] = useState(getDefaultCategoryForm)
+  const [categoryPending, setCategoryPending] = useState(false)
 
   const isLoggedIn = useMemo(() => Boolean(token), [token])
   const trimmedEmail = email.trim().toLowerCase()
@@ -291,10 +396,15 @@ function App() {
           title: '',
           description: '',
         }
-      case 'subscription':
+      case 'programs':
         return {
-          title: 'Subscription',
-          description: 'Monitor subscription metrics and plan usage.',
+          title: 'Programs & Plans',
+          description: 'Configure the 28-day free program and the paid 60-day premium journey.',
+        }
+      case 'foods':
+        return {
+          title: '',
+          description: '',
         }
       case 'privacyPolicy':
         return {
@@ -564,133 +674,180 @@ function App() {
     }
   }, [handleApiError, questionsFilter, token])
 
-  const loadPlans = useCallback(
+  const loadPrograms = useCallback(
     async (options = {}) => {
       if (!token) return
-      setPlansLoading(true)
-      setPlansError('')
-      const targetStatus = options.status ?? planStatusFilter ?? 'active'
-      const shouldIncludeInactive =
-        typeof options.includeInactive === 'boolean'
-          ? options.includeInactive
-          : targetStatus === 'inactive' || targetStatus === 'all'
+      setProgramsLoading(true)
+      setProgramsError('')
       try {
-        const response = await fetchSubscriptionPlans(
-          { includeInactive: shouldIncludeInactive, status: targetStatus },
-          token,
-        )
+        const includeInactive =
+          typeof options.includeInactive === 'boolean' ? options.includeInactive : true
+        const response = await fetchPrograms({ includeInactive }, token)
         const payload = response?.data ?? response ?? []
-        const normalizedPlans = Array.isArray(payload) ? payload : payload?.plans ?? []
-        setPlans(normalizedPlans ?? [])
+        const normalizedPrograms = Array.isArray(payload) ? payload : payload?.programs ?? []
+        setPrograms(normalizedPrograms ?? [])
       } catch (error) {
-        setPlansError(error?.message ?? 'Unable to load subscription plans.')
+        setProgramsError(error?.message ?? 'Unable to load programs.')
         handleApiError(error)
       } finally {
-        setPlansLoading(false)
-      }
-    },
-    [handleApiError, planStatusFilter, token],
-  )
-
-  const handlePlanStatusFilterChange = useCallback((nextFilter) => {
-    setPlanStatusFilter((prev) => (prev === nextFilter ? prev : nextFilter))
-  }, [])
-
-  const openCreatePlanModal = useCallback(() => {
-    setPlanModalMode('create')
-    setPlanForm(getDefaultPlanForm())
-    setPlanModalOpen(true)
-  }, [])
-
-  const openEditPlanModal = useCallback((plan) => {
-    if (!plan) return
-    setPlanModalMode('edit')
-    setPlanForm({
-      id: plan.id ?? '',
-      durationMonths:
-        typeof plan.duration_months === 'number'
-          ? String(plan.duration_months)
-          : String(plan.durationMonths ?? ''),
-      originalPrice: String(
-        plan.original_price ?? plan.originalPrice ?? plan.price ?? '',
-      ),
-      discountedPrice: String(
-        plan.discounted_price ?? plan.discountedPrice ?? '',
-      ),
-      isActive:
-        typeof plan.is_active === 'boolean' ? plan.is_active : plan.isActive ?? true,
-    })
-    setPlanModalOpen(true)
-  }, [])
-
-  const closePlanModal = useCallback(() => {
-    setPlanModalOpen(false)
-  }, [])
-
-  const handlePlanModalSubmit = useCallback(async () => {
-    if (!token) return
-    const payload = buildPlanPayload(planForm)
-    const mode = planModalMode
-    if (mode === 'edit' && !planForm.id) return
-    setPlanPending(mode)
-    try {
-      const response =
-        mode === 'edit'
-          ? await updateSubscriptionPlan(planForm.id, payload, token)
-          : await createSubscriptionPlan(payload, token)
-      setStatus({
-        type: 'success',
-        text:
-          response?.message ??
-          (mode === 'edit' ? 'Plan updated successfully.' : 'Plan created successfully.'),
-      })
-      setPlanModalOpen(false)
-      setPlanForm(getDefaultPlanForm())
-      loadPlans()
-    } catch (error) {
-      handleApiError(error)
-    } finally {
-      setPlanPending('')
-    }
-  }, [handleApiError, loadPlans, planForm, planModalMode, token])
-
-  const handleDeletePlan = useCallback(
-    async (planId) => {
-      if (!token || !planId) return
-      setPlanPending(`delete-${planId}`)
-      try {
-        const response = await deleteSubscriptionPlan(planId, token)
-        setStatus({
-          type: 'success',
-          text: response?.message ?? 'Plan deleted successfully.',
-        })
-        setPlans((prev) => prev.filter((plan) => plan.id !== planId))
-      } catch (error) {
-        handleApiError(error)
-      } finally {
-        setPlanPending('')
+        setProgramsLoading(false)
       }
     },
     [handleApiError, token],
   )
 
-  const handleTogglePlanActive = useCallback(
-    async (plan) => {
-      if (!token || !plan?.id) return
-      const planId = plan.id
-      const currentActive = plan?.is_active ?? plan?.isActive ?? true
-      const nextActive = !currentActive
-      const payload = buildPlanPayloadFromRecord(plan, { isActive: nextActive })
-      setPlanPending(`toggle-${planId}`)
+  const loadFoodCategories = useCallback(async () => {
+    if (!token) return
+    setFoodCategoriesLoading(true)
+    try {
+      const response = await fetchFoodCategoriesAdmin(token, { includeInactive: true })
+      const payload = response?.data ?? response ?? {}
+      setFoodCategories(payload.categories ?? [])
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setFoodCategoriesLoading(false)
+    }
+  }, [handleApiError, token])
+
+  const loadFoods = useCallback(
+    async (overrideFilters) => {
+      if (!token) return
+      const nextFilters = overrideFilters ?? foodFilters
+      setFoodsLoading(true)
+      setFoodsError('')
       try {
-        const response = await updateSubscriptionPlan(planId, payload, token)
-        const updatedPlan = response?.data ?? response ?? null
-        setPlans((prev) =>
+        const response = await fetchFoodsAdmin(
+          {
+            search: nextFilters.search,
+            categoryId: nextFilters.categoryId,
+            includeInactive: nextFilters.includeInactive,
+            page: 1,
+            pageSize: 100,
+          },
+          token,
+        )
+        const payload = response?.data ?? response ?? {}
+        setFoodsData({
+          items: payload.items ?? [],
+          total: payload.total ?? (payload.items?.length ?? 0),
+          page: payload.page ?? 1,
+          pageSize: payload.page_size ?? payload.pageSize ?? 100,
+          hasNext: Boolean(payload.has_next),
+        })
+      } catch (error) {
+        setFoodsError(error?.message ?? 'Unable to load foods.')
+        handleApiError(error)
+      } finally {
+        setFoodsLoading(false)
+      }
+    },
+    [foodFilters, handleApiError, token],
+  )
+
+  const openCreateProgramModal = useCallback(() => {
+    setProgramModalMode('create')
+    setProgramForm(getDefaultProgramForm())
+    setProgramModalOpen(true)
+  }, [])
+
+  const openEditProgramModal = useCallback((program) => {
+    if (!program) return
+    setProgramModalMode('edit')
+    setProgramForm({
+      id: program.id ?? '',
+      slug: sanitizeString(program.slug ?? ''),
+      title: sanitizeString(program.title ?? ''),
+      subtitle: sanitizeString(program.subtitle ?? ''),
+      description: sanitizeString(program.description ?? ''),
+      durationDays: String(program.duration_days ?? program.durationDays ?? ''),
+      workoutsPerWeek: String(program.workouts_per_week ?? program.workoutsPerWeek ?? ''),
+      restDaysPerWeek: String(program.rest_days_per_week ?? program.restDaysPerWeek ?? ''),
+      level: sanitizeString(program.level ?? ''),
+      accessLevel: (program.access_level ?? program.accessLevel ?? 'free') === 'paid' ? 'paid' : 'free',
+      ctaLabel: sanitizeString(program.cta_label ?? program.ctaLabel ?? ''),
+      isActive:
+        typeof program.is_active === 'boolean' ? program.is_active : program.isActive ?? true,
+    })
+    setProgramModalOpen(true)
+  }, [])
+
+  const closeProgramModal = useCallback(() => {
+    setProgramModalOpen(false)
+  }, [])
+
+  const handleProgramModalSubmit = useCallback(async () => {
+    if (!token) return
+    const payload = buildProgramPayload(programForm)
+    if (!payload.title) {
+      setStatus({ type: 'error', text: 'Title is required.' })
+      return
+    }
+    const mode = programModalMode
+    const identifier = mode === 'edit' ? programForm.id || programForm.slug : undefined
+    if (mode === 'edit' && !identifier) return
+    setProgramPending(mode)
+    try {
+      const response =
+        mode === 'edit'
+          ? await updateProgram(identifier, payload, token)
+          : await createProgram(payload, token)
+      setStatus({
+        type: 'success',
+        text:
+          response?.message ??
+          (mode === 'edit' ? 'Program updated successfully.' : 'Program created successfully.'),
+      })
+      setProgramModalOpen(false)
+      setProgramForm(getDefaultProgramForm())
+      loadPrograms()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setProgramPending('')
+    }
+  }, [handleApiError, loadPrograms, programForm, programModalMode, token])
+
+  const handleDeleteProgram = useCallback(
+    async (program) => {
+      if (!token) return
+      const identifier = program?.id ?? program?.slug
+      if (!identifier) return
+      setProgramPending(`delete-${identifier}`)
+      try {
+        const response = await deleteProgram(identifier, token)
+        setStatus({
+          type: 'success',
+          text: response?.message ?? 'Program deleted successfully.',
+        })
+        setPrograms((prev) =>
+          prev.filter((item) => item.id !== program?.id && item.slug !== program?.slug),
+        )
+      } catch (error) {
+        handleApiError(error)
+      } finally {
+        setProgramPending('')
+      }
+    },
+    [handleApiError, token],
+  )
+
+  const handleToggleProgramActive = useCallback(
+    async (program) => {
+      if (!token || !program?.id) return
+      const identifier = program.id
+      const nextActive = !(program?.is_active ?? program?.isActive ?? true)
+      const payload = buildProgramPayloadFromRecord(program, { isActive: nextActive })
+      setProgramPending(`toggle-${identifier}`)
+      try {
+        const response = await updateProgram(identifier, payload, token)
+        const updatedProgram = response?.data ?? response ?? null
+        setPrograms((prev) =>
           prev.map((item) =>
-            item.id === planId
+            item.id === identifier
               ? {
                   ...item,
-                  ...(updatedPlan ?? {}),
+                  ...(updatedProgram ?? {}),
                   is_active: nextActive,
                 }
               : item,
@@ -698,15 +855,199 @@ function App() {
         )
         setStatus({
           type: 'success',
-          text: response?.message ?? (nextActive ? 'Plan activated.' : 'Plan hidden.'),
+          text: response?.message ?? (nextActive ? 'Program activated.' : 'Program hidden.'),
         })
       } catch (error) {
         handleApiError(error)
       } finally {
-        setPlanPending('')
+        setProgramPending('')
       }
     },
     [handleApiError, token],
+  )
+
+  const handleFoodFiltersChange = useCallback((updates) => {
+    setFoodFilters((prev) => ({ ...prev, ...updates }))
+  }, [])
+
+  const openCreateFoodModal = useCallback(() => {
+    setFoodModalMode('create')
+    setFoodForm(getDefaultFoodForm())
+    setFoodModalOpen(true)
+  }, [])
+
+  const openEditFoodModal = useCallback((food) => {
+    if (!food) return
+    setFoodModalMode('edit')
+    setFoodForm({
+      id: food.id,
+      name: food.product_name ?? '',
+      brand: food.brand ?? '',
+      calories: food.calories != null ? String(food.calories) : '',
+      protein: food.protein != null ? String(food.protein) : '',
+      carbs: food.carbs != null ? String(food.carbs) : '',
+      fat: food.fat != null ? String(food.fat) : '',
+      servingQuantity: food.serving_quantity != null ? String(food.serving_quantity) : '',
+      servingUnit: food.serving_unit ?? 'serving',
+      categoryId: food.category_id ? String(food.category_id) : '',
+      isActive: Boolean(food.is_active ?? true),
+    })
+    setFoodModalOpen(true)
+  }, [])
+
+  const closeFoodModal = useCallback(() => {
+    setFoodModalOpen(false)
+  }, [])
+
+  const handleFoodModalSubmit = useCallback(async () => {
+    if (!token) return
+    const caloriesValue = Number(foodForm.calories)
+    if (!foodForm.name.trim() || Number.isNaN(caloriesValue) || caloriesValue <= 0) {
+      setStatus({ type: 'error', text: 'Name and calories are required.' })
+      return
+    }
+    const toNumber = (value) => {
+      if (value === '' || value == null) return null
+      const parsed = parseFloat(value)
+      return Number.isNaN(parsed) ? null : parsed
+    }
+    const payload = {
+      product_name: foodForm.name.trim(),
+      brand: foodForm.brand.trim() || null,
+      calories: caloriesValue,
+      protein: toNumber(foodForm.protein),
+      carbs: toNumber(foodForm.carbs),
+      fat: toNumber(foodForm.fat),
+      serving_quantity: toNumber(foodForm.servingQuantity) ?? 1,
+      serving_unit: foodForm.servingUnit?.trim() || 'serving',
+      category_id: foodForm.categoryId ? Number(foodForm.categoryId) : null,
+      is_active: Boolean(foodForm.isActive),
+    }
+    setFoodPending('saving')
+    try {
+      if (foodModalMode === 'edit' && foodForm.id) {
+        const response = await updateFood(foodForm.id, payload, token)
+        setStatus({ type: 'success', text: response?.message ?? 'Food updated.' })
+      } else {
+        const response = await createFood(payload, token)
+        setStatus({ type: 'success', text: response?.message ?? 'Food created.' })
+      }
+      setFoodModalOpen(false)
+      loadFoods()
+      loadFoodCategories()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setFoodPending('')
+    }
+  }, [foodForm, foodModalMode, handleApiError, loadFoodCategories, loadFoods, token])
+
+  const handleFoodArchive = useCallback(
+    async (food) => {
+      if (!token || !food) return
+      const result = await Swal.fire({
+        title: `Archive ${food.product_name ?? 'this food'}?`,
+        text: 'Users will no longer see it in the manual food library.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Archive',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#ec4899',
+        cancelButtonColor: '#94a3b8',
+        reverseButtons: true,
+      })
+      if (!result.isConfirmed) return
+      try {
+        await archiveFood(food.id, token)
+        setStatus({ type: 'success', text: 'Food archived.' })
+        loadFoods()
+      } catch (error) {
+        handleApiError(error)
+      }
+    },
+    [handleApiError, loadFoods, token],
+  )
+
+  const openCreateCategoryModal = useCallback(() => {
+    setCategoryModalMode('create')
+    setCategoryForm(getDefaultCategoryForm())
+    setCategoryModalOpen(true)
+  }, [])
+
+  const openEditCategoryModal = useCallback((category) => {
+    if (!category) return
+    setCategoryModalMode('edit')
+    setCategoryForm({
+      id: category.id,
+      name: category.name ?? '',
+      slug: category.slug ?? '',
+      description: category.description ?? '',
+      sortOrder: String(category.sort_order ?? 0),
+      isActive: Boolean(category.is_active ?? true),
+    })
+    setCategoryModalOpen(true)
+  }, [])
+
+  const closeCategoryModal = useCallback(() => {
+    setCategoryModalOpen(false)
+  }, [])
+
+  const handleCategoryModalSubmit = useCallback(async () => {
+    if (!token) return
+    if (!categoryForm.name.trim()) {
+      setStatus({ type: 'error', text: 'Name is required.' })
+      return
+    }
+    const payload = {
+      name: categoryForm.name.trim(),
+      slug: categoryForm.slug?.trim() || null,
+      description: categoryForm.description?.trim() || null,
+      sort_order: Number.parseInt(categoryForm.sortOrder, 10) || 0,
+      is_active: Boolean(categoryForm.isActive),
+    }
+    setCategoryPending('saving')
+    try {
+      if (categoryModalMode === 'edit' && categoryForm.id) {
+        await updateFoodCategory(categoryForm.id, payload, token)
+        setStatus({ type: 'success', text: 'Category updated.' })
+      } else {
+        await createFoodCategory(payload, token)
+        setStatus({ type: 'success', text: 'Category created.' })
+      }
+      setCategoryModalOpen(false)
+      loadFoodCategories()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setCategoryPending('')
+    }
+  }, [categoryForm, categoryModalMode, handleApiError, loadFoodCategories, token])
+
+  const handleCategoryArchive = useCallback(
+    async (category) => {
+      if (!token || !category) return
+      const result = await Swal.fire({
+        title: `Archive ${category.name}?`,
+        text: 'Foods will remain but the category will be hidden from filters.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Archive category',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#ec4899',
+        cancelButtonColor: '#94a3b8',
+        reverseButtons: true,
+      })
+      if (!result.isConfirmed) return
+      try {
+        await archiveFoodCategory(category.id, token)
+        setStatus({ type: 'success', text: 'Category archived.' })
+        loadFoodCategories()
+        loadFoods()
+      } catch (error) {
+        handleApiError(error)
+      }
+    },
+    [handleApiError, loadFoodCategories, loadFoods, token],
   )
 
   useEffect(() => {
@@ -772,10 +1113,22 @@ useEffect(() => {
   }, [activeView, isLoggedIn, loadQuestions])
 
   useEffect(() => {
-    if (isLoggedIn && activeView === 'subscription') {
-      loadPlans()
+    if (isLoggedIn && activeView === 'programs') {
+      loadPrograms()
     }
-  }, [activeView, isLoggedIn, loadPlans])
+  }, [activeView, isLoggedIn, loadPrograms])
+
+  useEffect(() => {
+    if (isLoggedIn && activeView === 'foods') {
+      loadFoodCategories()
+    }
+  }, [activeView, isLoggedIn, loadFoodCategories])
+
+  useEffect(() => {
+    if (isLoggedIn && activeView === 'foods') {
+      loadFoods()
+    }
+  }, [activeView, isLoggedIn, loadFoods])
 
   useEffect(() => {
     if (resendSeconds <= 0) return undefined
@@ -1455,19 +1808,37 @@ useEffect(() => {
                   onAddQuestion={openCreateQuestionModal}
                 />
               )}
-              {activeView === 'subscription' && (
-                <SubscriptionView
-                  plans={plans}
-                  isLoading={plansLoading}
-                  error={plansError}
-                  onRefresh={loadPlans}
-                  onAddPlan={openCreatePlanModal}
-                  onEditPlan={openEditPlanModal}
-                  onDeletePlan={handleDeletePlan}
-                  onTogglePlanActive={handleTogglePlanActive}
-                  pendingAction={planPending}
-                  statusFilter={planStatusFilter}
-                  onStatusFilterChange={handlePlanStatusFilterChange}
+              {activeView === 'programs' && (
+                <ProgramsView
+                  programs={programs}
+                  isLoading={programsLoading}
+                  error={programsError}
+                  onRefresh={loadPrograms}
+                  onAddProgram={openCreateProgramModal}
+                  onEditProgram={openEditProgramModal}
+                  onDeleteProgram={handleDeleteProgram}
+                  onToggleProgramActive={handleToggleProgramActive}
+                  pendingAction={programPending}
+                />
+              )}
+              {activeView === 'foods' && (
+                <FoodsView
+                  foodsData={foodsData}
+                  foodsLoading={foodsLoading || foodCategoriesLoading}
+                  foodsError={foodsError}
+                  categories={foodCategories}
+                  filters={foodFilters}
+                  onFiltersChange={handleFoodFiltersChange}
+                  onAddFood={openCreateFoodModal}
+                  onEditFood={openEditFoodModal}
+                  onDeleteFood={handleFoodArchive}
+                  onAddCategory={openCreateCategoryModal}
+                  onEditCategory={openEditCategoryModal}
+                  onDeleteCategory={handleCategoryArchive}
+                  onRefresh={() => {
+                    loadFoods()
+                    loadFoodCategories()
+                  }}
                 />
               )}
               {activeView === 'privacyPolicy' && <PrivacyPolicyView />}
@@ -1500,14 +1871,35 @@ useEffect(() => {
         updateOptionField={updateOptionField}
         toggleOptionActive={toggleOptionActive}
       />
-      <PlanModal
-        open={isPlanModalOpen}
-        mode={planModalMode}
-        form={planForm}
-        setForm={setPlanForm}
-        pendingAction={planPending === 'create' || planPending === 'edit' ? planPending : ''}
-        onClose={closePlanModal}
-        onSubmit={handlePlanModalSubmit}
+      <ProgramModal
+        open={isProgramModalOpen}
+        mode={programModalMode}
+        form={programForm}
+        setForm={setProgramForm}
+        pendingAction={
+          programPending === 'create' || programPending === 'edit' ? programPending : ''
+        }
+        onClose={closeProgramModal}
+        onSubmit={handleProgramModalSubmit}
+      />
+      <FoodModal
+        open={isFoodModalOpen}
+        mode={foodModalMode}
+        form={foodForm}
+        setForm={setFoodForm}
+        categories={foodCategories}
+        pendingAction={foodPending === 'saving' ? 'saving' : ''}
+        onClose={closeFoodModal}
+        onSubmit={handleFoodModalSubmit}
+      />
+      <FoodCategoryModal
+        open={isCategoryModalOpen}
+        mode={categoryModalMode}
+        form={categoryForm}
+        setForm={setCategoryForm}
+        pendingAction={categoryPending === 'saving' ? 'saving' : ''}
+        onClose={closeCategoryModal}
+        onSubmit={handleCategoryModalSubmit}
       />
       <UserAnalyticsModal
         open={isUserAnalyticsOpen}
