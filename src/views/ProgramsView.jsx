@@ -43,6 +43,7 @@ function ProgramsView({
   onEditProgram,
   onDeleteProgram,
   onToggleProgramActive,
+  onManageSchedule,
   pendingAction,
 }) {
   const list = Array.isArray(programs) ? programs : []
@@ -98,8 +99,8 @@ function ProgramsView({
         <div className="loading-panel">Loading programs…</div>
       ) : sortedPrograms.length === 0 ? (
         <div className="empty-panel">
-          <h3>No programs yet</h3>
-          <p>Create the 28-day free plan and 60-day premium plan to guide members.</p>
+          <h3>No plans added</h3>
+          <p>Add a plan to make it available for members in the app.</p>
           <button className="primary" onClick={onAddProgram}>
             Create program
           </button>
@@ -111,9 +112,6 @@ function ProgramsView({
             const identifier = program.id ?? program.slug
             const pendingDelete = pendingAction === `delete-${identifier}`
             const pendingToggle = pendingAction === `toggle-${identifier}`
-            const previewDays = Array.isArray(program.preview_days ?? program.previewDays)
-              ? program.preview_days ?? program.previewDays
-              : []
             return (
               <article
                 key={identifier}
@@ -126,43 +124,30 @@ function ProgramsView({
                   </div>
                   {program.subtitle ? <p className="plan-card__subtitle">{program.subtitle}</p> : null}
                 </div>
-                <div className="plan-card__price">
-                  <span className="plan-price__discounted">{formatDurationLabel(program.duration_days)}</span>
-                  <span className="plan-price__monthly">{formatScheduleLabel(program)}</span>
-                </div>
                 <div className="plan-card__meta">
                   <div>
-                    <span>Slug</span>
-                    <strong>{program.slug}</strong>
+                    <span>Number of days</span>
+                    <strong>{formatDurationLabel(program.duration_days)}</strong>
                   </div>
                   <div>
-                    <span>CTA label</span>
-                    <strong>{program.cta_label || 'Default'}</strong>
+                    <span>Access type</span>
+                    <strong>{getAccessBadge(program)}</strong>
                   </div>
                   <div>
                     <span>Visibility</span>
                     <strong>{active ? 'Active' : 'Hidden'}</strong>
                   </div>
                 </div>
-                {previewDays.length > 0 && (
-                  <div className="plan-card__preview">
-                    <span>Preview days</span>
-                    <div className="plan-preview-chips">
-                      {previewDays.slice(0, 4).map((day) => (
-                        <span key={`day-${program.id}-${day.day_number}`} className="plan-chip">
-                          Day {day.day_number}: {day.is_rest_day ? 'Rest' : day.focus || day.title}
-                        </span>
-                      ))}
-                      {previewDays.length > 4 && (
-                        <span className="plan-chip muted">+{previewDays.length - 4} more</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {program.description ? (
-                  <p className="plan-card__description">{program.description}</p>
-                ) : null}
                 <div className="plan-card__actions">
+                  <button
+                    type="button"
+                    className="plan-action"
+                    onClick={() => onManageSchedule?.(program)}
+                    title="Manage schedule"
+                  >
+                    <img src={editIcon} alt="Manage schedule" />
+                    <span>Schedule</span>
+                  </button>
                   <button
                     type="button"
                     className="plan-action"

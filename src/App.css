@@ -2985,6 +2985,10 @@ button.primary.slim {
   gap: 18px;
 }
 
+.plan-modal--compact {
+  gap: 12px;
+}
+
 .plan-modal-section {
   display: flex;
   flex-direction: column;
@@ -3015,6 +3019,10 @@ button.primary.slim {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
+}
+
+.plan-field-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .plan-field {
@@ -4069,4 +4077,118 @@ button.primary.slim {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.plan-schedule-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plan-schedule-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.plan-schedule-toolbar__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plan-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.plan-day-card {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-day-card--rest {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.15);
+}
+
+.plan-day-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plan-day-card__eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plan-day-card__header h4 {
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+}
+
+.plan-day-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-day-card__video-preview {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.plan-day-card__video-preview img {
+  width: 90px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.plan-day-card__video-title {
+  margin: 0;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.plan-day-card__rest-note,
+.plan-day-card__hint {
+  margin: 0;
+  color: #65728a;
+  font-size: 0.9rem;
+}
+
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.upload-field input {
+  margin-top: 6px;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  color: #ef4444;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
 }

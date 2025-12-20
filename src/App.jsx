@@ -22,6 +22,8 @@ import {
   createProgram,
   updateProgram,
   deleteProgram,
+  fetchProgramDetailAdmin,
+  updateProgramSchedule,
   fetchFoodCategoriesAdmin,
   createFoodCategory,
   updateFoodCategory,
@@ -68,6 +70,7 @@ import VideoModal from './components/modals/VideoModal'
 import QuestionModal from './components/modals/QuestionModal'
 import UserAnalyticsModal from './components/modals/UserAnalyticsModal'
 import ProgramModal from './components/modals/ProgramModal'
+import ProgramScheduleModal from './components/modals/ProgramScheduleModal'
 import FoodModal from './components/modals/FoodModal'
 import FoodCategoryModal from './components/modals/FoodCategoryModal'
 // import { createLogger } from 'vite'
@@ -106,16 +109,8 @@ const getEmptyOtpDigits = () => Array(OTP_LENGTH).fill('')
 
 const getDefaultProgramForm = () => ({
   id: '',
-  slug: '',
-  title: '',
-  subtitle: '',
-  description: '',
   durationDays: '28',
-  workoutsPerWeek: '5',
-  restDaysPerWeek: '2',
-  level: '',
   accessLevel: 'free',
-  ctaLabel: '',
   isActive: true,
 })
 
@@ -163,63 +158,108 @@ const sanitizeString = (value) => {
   return String(value)
 }
 
-const buildProgramPayload = (form) => ({
-  slug: normalizeProgramSlug(form.slug, form.title),
-  title: sanitizeString(form.title).trim(),
-  subtitle: sanitizeString(form.subtitle).trim() || null,
-  description: sanitizeString(form.description).trim() || null,
-  duration_days: parseIntValue(form.durationDays),
-  workouts_per_week: parseIntValue(form.workoutsPerWeek),
-  rest_days_per_week: parseIntValue(form.restDaysPerWeek),
-  level: sanitizeString(form.level).trim() || null,
-  access_level: form.accessLevel === 'paid' ? 'paid' : 'free',
-  cta_label: sanitizeString(form.ctaLabel).trim() || null,
-  is_active: Boolean(form.isActive),
-})
+const buildScheduleDaysState = (program, detailResponse) => {
+  const duration = parseIntValue(program?.duration_days ?? program?.durationDays ?? 0)
+  const remoteDays = Array.isArray(detailResponse?.days) ? detailResponse.days : []
+  const map = new Map()
+  remoteDays.forEach((day) => {
+    map.set(day.day_number, {
+      id: day.id,
+      dayNumber: day.day_number,
+      isRestDay: Boolean(day.is_rest_day),
+      videoId: day.video_id ?? null,
+      videoUrl: day.video?.video_url ?? '',
+      videoThumbnail: day.video?.thumbnail_url ?? '',
+      videoTitle: day.video?.title ?? '',
+      videoFile: null,
+      thumbnailFile: null,
+    })
+  })
+  const schedule = []
+  for (let dayNumber = 1; dayNumber <= (duration || 0); dayNumber += 1) {
+    schedule.push(
+      map.get(dayNumber) || {
+        id: null,
+        dayNumber,
+        isRestDay: false,
+        videoId: null,
+        videoUrl: '',
+        videoThumbnail: '',
+        videoTitle: '',
+        videoFile: null,
+        thumbnailFile: null,
+      },
+    )
+  }
+  return schedule
+}
+
+const buildPlanSlug = (durationDays, accessLevel) => {
+  const duration = parseIntValue(durationDays)
+  const access = accessLevel === 'paid' ? 'paid' : 'free'
+  const durationLabel = duration > 0 ? `${duration}-day` : 'custom'
+  return `${durationLabel}-${access}-plan`.toLowerCase().replace(/[^a-z0-9-]/g, '')
+}
+
+const getPlanMediaFolder = (program) => {
+  const duration = parseIntValue(program?.duration_days ?? program?.durationDays ?? 0)
+  if (duration === 28) return '28 days plan videos'
+  if (duration === 60) return '60 days plan videos'
+  const slug = typeof program?.slug === 'string' ? program.slug.trim() : ''
+  if (slug) return `programs/${slug}`
+  const identifier = program?.id ?? ''
+  return `programs/plan-${identifier || 'custom'}`
+}
+
+const buildProgramPayload = (form) => {
+  const durationDays = parseIntValue(form.durationDays)
+  const accessLevel = form.accessLevel === 'paid' ? 'paid' : 'free'
+  const slug = buildPlanSlug(durationDays, accessLevel)
+  return {
+    slug,
+    title: durationDays > 0 ? `${durationDays}-Day Plan` : 'Program',
+    subtitle: null,
+    description: null,
+    duration_days: durationDays,
+    workouts_per_week: 0,
+    rest_days_per_week: 0,
+    level: null,
+    access_level: accessLevel,
+    cta_label: null,
+    is_active: Boolean(form.isActive),
+  }
+}
 
 const buildProgramPayloadFromRecord = (program, overrides = {}) => {
-  const nextAccess =
+  const durationDays = parseIntValue(
+    overrides.durationDays ?? overrides.duration_days ?? program?.duration_days ?? 0,
+  )
+  const accessLevelRaw =
     overrides.accessLevel ??
     overrides.access_level ??
     program?.access_level ??
     program?.accessLevel ??
     'free'
-  const nextSubtitle = sanitizeString(overrides.subtitle ?? program?.subtitle ?? '').trim()
-  const nextDescription = sanitizeString(overrides.description ?? program?.description ?? '').trim()
-  const nextLevel = sanitizeString(overrides.level ?? program?.level ?? '').trim()
-  const nextCta = sanitizeString(overrides.ctaLabel ?? program?.cta_label ?? program?.ctaLabel ?? '').trim()
+  const accessLevel = accessLevelRaw === 'paid' ? 'paid' : 'free'
+  const nextActive =
+    typeof overrides.isActive === 'boolean'
+      ? overrides.isActive
+      : typeof overrides.is_active === 'boolean'
+        ? overrides.is_active
+        : Boolean(program?.is_active ?? program?.isActive ?? true)
+  const slug = buildPlanSlug(durationDays, accessLevel)
   return {
-    slug: normalizeProgramSlug(
-      overrides.slug ?? program?.slug ?? '',
-      overrides.title ?? program?.title ?? '',
-    ),
-    title: sanitizeString(overrides.title ?? program?.title ?? ''),
-    subtitle: nextSubtitle || null,
-    description: nextDescription || null,
-    duration_days: parseIntValue(
-      overrides.durationDays ?? overrides.duration_days ?? program?.duration_days ?? 0,
-    ),
-    workouts_per_week: parseIntValue(
-      overrides.workoutsPerWeek ??
-        overrides.workouts_per_week ??
-        program?.workouts_per_week ??
-        0,
-    ),
-    rest_days_per_week: parseIntValue(
-      overrides.restDaysPerWeek ??
-        overrides.rest_days_per_week ??
-        program?.rest_days_per_week ??
-        0,
-    ),
-    level: nextLevel || null,
-    access_level: nextAccess === 'paid' ? 'paid' : 'free',
-    cta_label: nextCta || null,
-    is_active:
-      typeof overrides.isActive === 'boolean'
-        ? overrides.isActive
-        : typeof overrides.is_active === 'boolean'
-          ? overrides.is_active
-          : Boolean(program?.is_active ?? program?.isActive ?? true),
+    slug,
+    title: durationDays > 0 ? `${durationDays}-Day Plan` : 'Program',
+    subtitle: null,
+    description: null,
+    duration_days: durationDays,
+    workouts_per_week: 0,
+    rest_days_per_week: 0,
+    level: null,
+    access_level: accessLevel,
+    cta_label: null,
+    is_active: nextActive,
   }
 }
 
@@ -351,6 +391,12 @@ function App() {
   const [programModalMode, setProgramModalMode] = useState('create')
   const [isProgramModalOpen, setProgramModalOpen] = useState(false)
   const [programForm, setProgramForm] = useState(getDefaultProgramForm)
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
+  const [scheduleProgram, setScheduleProgram] = useState(null)
+  const [scheduleDays, setScheduleDays] = useState([])
+  const [scheduleLoading, setScheduleLoading] = useState(false)
+  const [scheduleError, setScheduleError] = useState('')
+  const [schedulePending, setSchedulePending] = useState(false)
   const [foodsData, setFoodsData] = useState({ items: [], total: 0, page: 1, pageSize: 50 })
   const [foodsLoading, setFoodsLoading] = useState(false)
   const [foodsError, setFoodsError] = useState('')
@@ -756,16 +802,8 @@ function App() {
     setProgramModalMode('edit')
     setProgramForm({
       id: program.id ?? '',
-      slug: sanitizeString(program.slug ?? ''),
-      title: sanitizeString(program.title ?? ''),
-      subtitle: sanitizeString(program.subtitle ?? ''),
-      description: sanitizeString(program.description ?? ''),
       durationDays: String(program.duration_days ?? program.durationDays ?? ''),
-      workoutsPerWeek: String(program.workouts_per_week ?? program.workoutsPerWeek ?? ''),
-      restDaysPerWeek: String(program.rest_days_per_week ?? program.restDaysPerWeek ?? ''),
-      level: sanitizeString(program.level ?? ''),
       accessLevel: (program.access_level ?? program.accessLevel ?? 'free') === 'paid' ? 'paid' : 'free',
-      ctaLabel: sanitizeString(program.cta_label ?? program.ctaLabel ?? ''),
       isActive:
         typeof program.is_active === 'boolean' ? program.is_active : program.isActive ?? true,
     })
@@ -775,6 +813,192 @@ function App() {
   const closeProgramModal = useCallback(() => {
     setProgramModalOpen(false)
   }, [])
+
+  const openScheduleModal = useCallback(
+    async (program) => {
+      if (!token || !program) return
+      setScheduleProgram(program)
+      setScheduleModalOpen(true)
+      setScheduleLoading(true)
+      setScheduleError('')
+      try {
+        const identifier = program.id ?? program.slug
+        if (!identifier) {
+          throw new Error('Unable to determine program identifier.')
+        }
+        const response = await fetchProgramDetailAdmin(identifier, token)
+        const payload = response?.data ?? response
+        setScheduleDays(buildScheduleDaysState(program, payload))
+      } catch (error) {
+        handleApiError(error)
+        setScheduleError(error?.message ?? 'Unable to load program schedule.')
+        setScheduleDays([])
+      } finally {
+        setScheduleLoading(false)
+      }
+    },
+    [handleApiError, token],
+  )
+
+  const closeScheduleModal = useCallback(() => {
+    setScheduleModalOpen(false)
+    setScheduleProgram(null)
+    setScheduleDays([])
+    setScheduleError('')
+  }, [])
+
+  const handleToggleDayRest = useCallback((dayNumber, isRestDay) => {
+    setScheduleDays((prev) =>
+      prev.map((day) =>
+        day.dayNumber === dayNumber
+          ? {
+              ...day,
+              isRestDay,
+              ...(isRestDay
+                ? {
+                    videoId: null,
+                    videoUrl: '',
+                    videoThumbnail: '',
+                    videoTitle: '',
+                    videoFile: null,
+                    thumbnailFile: null,
+                  }
+                : {}),
+            }
+          : day,
+      ),
+    )
+  }, [])
+
+  const handleSelectDayFile = useCallback((dayNumber, field, file) => {
+    setScheduleDays((prev) =>
+      prev.map((day) =>
+        day.dayNumber === dayNumber
+          ? {
+              ...day,
+              [field]: file ?? null,
+            }
+          : day,
+      ),
+    )
+  }, [])
+
+  const handleClearDayVideo = useCallback((dayNumber) => {
+    setScheduleDays((prev) =>
+      prev.map((day) =>
+        day.dayNumber === dayNumber
+          ? {
+              ...day,
+              videoId: null,
+              videoUrl: '',
+              videoThumbnail: '',
+              videoTitle: '',
+              videoFile: null,
+              thumbnailFile: null,
+            }
+          : day,
+      ),
+    )
+  }, [])
+
+  const handleAutoRestDays = useCallback(() => {
+    setScheduleDays((prev) =>
+      prev.map((day) => {
+        const mod = day.dayNumber % 7
+        const shouldRest = mod === 0 || mod === 6
+        if (!shouldRest) return day
+        return {
+          ...day,
+          isRestDay: true,
+          videoId: null,
+          videoUrl: '',
+          videoThumbnail: '',
+          videoTitle: '',
+          videoFile: null,
+          thumbnailFile: null,
+        }
+      }),
+    )
+  }, [])
+
+  const handleSaveSchedule = useCallback(async () => {
+    if (!token || !scheduleProgram) return
+    if (scheduleDays.length === 0) {
+      setScheduleError('Add at least one day to the plan.')
+      return
+    }
+    const identifier = scheduleProgram.id ?? scheduleProgram.slug
+    if (!identifier) {
+      setScheduleError('Unable to determine program identifier.')
+      return
+    }
+    setSchedulePending(true)
+    setScheduleError('')
+    try {
+      const planFolder = getPlanMediaFolder(scheduleProgram)
+      await ensureSpacesFolders([planFolder, `${planFolder}/thumbnails`])
+
+      const preparedDays = []
+      for (const day of scheduleDays) {
+        if (day.isRestDay) {
+          preparedDays.push({
+            day_number: day.dayNumber,
+            is_rest_day: true,
+            title: `Rest Day ${day.dayNumber}`,
+          })
+          continue
+        }
+        let videoId = day.videoId
+        if (day.videoFile || day.thumbnailFile) {
+          if (!day.videoFile || !day.thumbnailFile) {
+            throw new Error(`Day ${day.dayNumber}: select both a video and thumbnail.`)
+          }
+          const [videoUpload, thumbUpload] = await Promise.all([
+            uploadFileToSpaces(day.videoFile, { folder: planFolder }),
+            uploadFileToSpaces(day.thumbnailFile, { folder: `${planFolder}/thumbnails` }),
+          ])
+          const videoPayload = {
+            body_part: 'FullBody',
+            gender: 'All',
+            title: `${scheduleProgram.title || 'Program'} · Day ${day.dayNumber}`,
+            description: `Workout for day ${day.dayNumber}`,
+            video_url: videoUpload.url,
+            thumbnail_url: thumbUpload.url,
+          }
+          const uploadResponse = await uploadVideo(videoPayload, token)
+          videoId =
+            uploadResponse?.data?.id ??
+            uploadResponse?.data?.video?.id ??
+            uploadResponse?.data?.video_id ??
+            null
+          if (!videoId) {
+            throw new Error(`Unable to attach video for day ${day.dayNumber}.`)
+          }
+        }
+        if (!videoId) {
+          throw new Error(`Day ${day.dayNumber} requires a workout video.`)
+        }
+        preparedDays.push({
+          day_number: day.dayNumber,
+          is_rest_day: false,
+          video_id: videoId,
+          title: `${scheduleProgram.title || 'Program'} · Day ${day.dayNumber}`,
+        })
+      }
+      const response = await updateProgramSchedule(identifier, { days: preparedDays }, token)
+      setStatus({
+        type: 'success',
+        text: response?.message ?? 'Program schedule updated successfully.',
+      })
+      closeScheduleModal()
+      loadPrograms()
+    } catch (error) {
+      handleApiError(error)
+      setScheduleError(error?.message ?? 'Unable to save schedule.')
+    } finally {
+      setSchedulePending(false)
+    }
+  }, [closeScheduleModal, handleApiError, loadPrograms, scheduleDays, scheduleProgram, token])
 
   const handleProgramModalSubmit = useCallback(async () => {
     if (!token) return
@@ -1818,6 +2042,7 @@ useEffect(() => {
                   onEditProgram={openEditProgramModal}
                   onDeleteProgram={handleDeleteProgram}
                   onToggleProgramActive={handleToggleProgramActive}
+                  onManageSchedule={openScheduleModal}
                   pendingAction={programPending}
                 />
               )}
@@ -1881,6 +2106,20 @@ useEffect(() => {
         }
         onClose={closeProgramModal}
         onSubmit={handleProgramModalSubmit}
+      />
+      <ProgramScheduleModal
+        open={scheduleModalOpen}
+        program={scheduleProgram}
+        days={scheduleDays}
+        loading={scheduleLoading}
+        error={scheduleError}
+        pending={schedulePending}
+        onClose={closeScheduleModal}
+        onToggleRest={handleToggleDayRest}
+        onSelectFile={handleSelectDayFile}
+        onClearVideo={handleClearDayVideo}
+        onAutoRest={handleAutoRestDays}
+        onSave={handleSaveSchedule}
       />
       <FoodModal
         open={isFoodModalOpen}

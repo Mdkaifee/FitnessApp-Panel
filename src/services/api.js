@@ -211,6 +211,18 @@ export const deleteProgram = (programIdOrSlug, token) =>
     token,
   })
 
+export const fetchProgramDetailAdmin = (programIdOrSlug, token) =>
+  apiRequest(`/programs/admin/${programIdOrSlug}`, {
+    token,
+  })
+
+export const updateProgramSchedule = (programIdOrSlug, payload, token) =>
+  apiRequest(`/programs/admin/${programIdOrSlug}/schedule`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
 export const fetchFoodCategoriesAdmin = (token, { includeInactive = true } = {}) => {
   const query = includeInactive ? '?include_inactive=true' : '?include_inactive=false'
   return apiRequest(`/nutrition/admin/categories${query}`, { token })
