@@ -4148,12 +4148,17 @@ button.primary.slim {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+  margin-top: -8px;
 }
 
 .plan-schedule-toolbar__actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.plan-schedule-toolbar__actions button {
+  border-radius: 5px;
 }
 
 .plan-schedule-grid {
@@ -4163,18 +4168,34 @@ button.primary.slim {
 }
 
 .plan-day-card {
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  border-radius: 16px;
-  padding: 16px;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 5px;
+  padding: 18px;
   background: #fff;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plan-day-card:hover {
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
 .plan-day-card--rest {
+  border-color: rgba(99, 102, 241, 0.18);
   background: #f8fafc;
-  border-color: rgba(15, 23, 42, 0.15);
+}
+
+.plan-day-card--pending {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(248, 250, 252, 0.95);
+}
+
+.plan-day-card--complete {
+  border-color: rgba(34, 197, 94, 0.5);
 }
 
 .plan-day-card__header {
@@ -4197,6 +4218,25 @@ button.primary.slim {
   font-size: 1.05rem;
 }
 
+.plan-day-card__badge {
+  display: inline-flex;
+  margin-top: 8px;
+  width: fit-content;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  padding: 4px 12px;
+  background: rgba(148, 163, 184, 0.25);
+  color: #475569;
+  font-weight: 700;
+}
+
+.plan-day-card__badge--rest {
+  background: rgba(14, 165, 233, 0.15);
+  color: #0284c7;
+}
+
 .plan-day-card__content {
   display: flex;
   flex-direction: column;
@@ -4205,14 +4245,17 @@ button.primary.slim {
 
 .plan-day-card__video-preview {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: #f8fafc;
 }
 
 .plan-day-card__video-preview img {
-  width: 90px;
-  height: 64px;
-  border-radius: 8px;
+  width: 96px;
+  height: 72px;
+  border-radius: 5px;
   object-fit: cover;
   border: 1px solid rgba(15, 23, 42, 0.12);
 }
@@ -4230,6 +4273,23 @@ button.primary.slim {
   font-size: 0.9rem;
 }
 
+.plan-day-card__divider {
+  height: 1px;
+  width: 100%;
+  background: rgba(15, 23, 42, 0.1);
+}
+
+.plan-day-card__upload-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.plan-day-card__upload-row .upload-field {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
 .upload-field {
   display: flex;
   flex-direction: column;
@@ -4239,6 +4299,125 @@ button.primary.slim {
 
 .upload-field input {
   margin-top: 6px;
+}
+
+.upload-picker {
+  position: relative;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 5px;
+  padding: 10px 12px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f6f7fb;
+}
+
+.upload-picker__button {
+  background: linear-gradient(120deg, #fb6198, #f472b6);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 18px;
+  border-radius: 5px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.upload-picker__text {
+  font-size: 0.83rem;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+
+.upload-picker__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.plan-day-card__status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.plan-pill {
+  padding: 4px 12px;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #475569;
+}
+
+.plan-pill--success {
+  background: rgba(34, 197, 94, 0.25);
+  color: #0f8e5b;
+}
+
+.plan-pill--warning {
+  background: rgba(248, 113, 113, 0.22);
+  color: #e11d48;
+}
+
+.plan-pill--info {
+  background: rgba(59, 130, 246, 0.2);
+  color: #2563eb;
+}
+
+.plan-pill--muted {
+  background: rgba(148, 163, 184, 0.25);
+  color: #475569;
+}
+
+.plan-day-card__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.plan-action-button {
+  border: none;
+  border-radius: 5px;
+  padding: 6px 18px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(120deg, #fb6198, #f472b6);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.plan-action-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.plan-action-button--ghost {
+  background: rgba(248, 113, 113, 0.18);
+  color: #dc2626;
+}
+
+.plan-action-button--ghost:hover {
+  background: rgba(248, 113, 113, 0.28);
+  opacity: 1;
 }
 
 .link-button {

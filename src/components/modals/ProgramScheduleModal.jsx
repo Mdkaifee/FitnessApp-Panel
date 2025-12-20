@@ -15,7 +15,9 @@ function ProgramScheduleModal({
   onSave,
 }) {
   if (!open) return null
+
   const planTitle = program?.title || `${program?.duration_days || program?.durationDays || ''}-Day Plan`
+
   return (
     <Modal open={open} title={`${planTitle} schedule`} onClose={onClose}>
       <div className="plan-schedule-modal">
@@ -26,12 +28,6 @@ function ProgramScheduleModal({
         ) : (
           <>
             <div className="plan-schedule-toolbar">
-              <div>
-                <p className="plan-section-title">Daily structure</p>
-                <p className="plan-section-description">
-                  Assign two rest days per week and upload workouts for every other day.
-                </p>
-              </div>
               <div className="plan-schedule-toolbar__actions">
                 <button type="button" className="secondary slim" onClick={onAutoRest}>
                   Auto rest pattern
@@ -46,93 +42,156 @@ function ProgramScheduleModal({
                 </button>
               </div>
             </div>
+
             {days.length === 0 ? (
               <p className="plan-day-card__hint">
                 This plan does not have any days yet. Add a program first, then configure the schedule.
               </p>
             ) : (
               <div className="plan-schedule-grid">
-                {days.map((day) => (
-                <article
-                  key={`plan-day-${day.dayNumber}`}
-                  className={`plan-day-card ${day.isRestDay ? 'plan-day-card--rest' : ''}`}
-                >
-                  <div className="plan-day-card__header">
-                    <div>
-                      <p className="plan-day-card__eyebrow">Day {day.dayNumber}</p>
-                      <h4>{day.isRestDay ? 'Recovery' : 'Workout'}</h4>
-                    </div>
-                    <label className="plan-toggle">
-                      <input
-                        type="checkbox"
-                        checked={day.isRestDay}
-                        onChange={(event) => onToggleRest(day.dayNumber, event.target.checked)}
-                      />
-                      <span>Rest day</span>
-                    </label>
-                  </div>
-                  {day.isRestDay ? (
-                    <p className="plan-day-card__rest-note">
-                      Members will see a rest message on this day. No video upload required.
-                    </p>
-                  ) : (
-                    <div className="plan-day-card__content">
-                      {day.videoThumbnail || day.videoUrl ? (
-                        <div className="plan-day-card__video-preview">
-                          {day.videoThumbnail ? (
-                            <img src={day.videoThumbnail} alt={`Day ${day.dayNumber} thumbnail`} />
-                          ) : null}
-                          <div>
-                            <p className="plan-day-card__video-title">
-                              {day.videoTitle || 'Uploaded workout'}
+                {days.map((day) => {
+                  const uploadReady = Boolean(day.videoId || day.videoUrl || day.videoFile)
+                  const thumbnailReady = Boolean(day.thumbnailFile || day.videoThumbnail)
+                  const cardClasses = [
+                    'plan-day-card',
+                    day.isRestDay ? 'plan-day-card--rest' : '',
+                    !day.isRestDay && !uploadReady ? 'plan-day-card--pending' : '',
+                    !day.isRestDay && uploadReady ? 'plan-day-card--complete' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+
+                  return (
+                    <article key={`plan-day-${day.dayNumber}`} className={cardClasses}>
+                      <div className="plan-day-card__header">
+                        <div>
+                          <p className="plan-day-card__eyebrow">Day {day.dayNumber}</p>
+                          <h4>{day.isRestDay ? 'Recovery' : 'Workout'}</h4>
+                          <span
+                            className={`plan-day-card__badge ${
+                              day.isRestDay ? 'plan-day-card__badge--rest' : ''
+                            }`}
+                          >
+                            {day.isRestDay
+                              ? 'Rest & recharge'
+                              : uploadReady
+                              ? 'Upload ready'
+                              : 'Upload pending'}
+                          </span>
+                        </div>
+                        <label className="plan-toggle">
+                          <input
+                            type="checkbox"
+                            checked={day.isRestDay}
+                            onChange={(event) => onToggleRest(day.dayNumber, event.target.checked)}
+                          />
+                          <span>Rest day</span>
+                        </label>
+                      </div>
+                      {day.isRestDay ? (
+                        <p className="plan-day-card__rest-note">
+                          Members will see a rest message on this day. No video upload required.
+                        </p>
+                      ) : (
+                        <div className="plan-day-card__content">
+                          {day.videoThumbnail || day.videoUrl ? (
+                            <div className="plan-day-card__video-preview">
+                              {day.videoThumbnail ? (
+                                <img src={day.videoThumbnail} alt={`Day ${day.dayNumber} thumbnail`} />
+                              ) : null}
+                              <div>
+                                <p className="plan-day-card__video-title">
+                                  {day.videoTitle || 'Uploaded workout'}
+                                </p>
+                                {(day.videoUrl || day.videoId) ? (
+                                  <div className="plan-day-card__actions">
+                                    {day.videoUrl ? (
+                                      <a
+                                        href={day.videoUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="plan-action-button"
+                                      >
+                                        Preview video
+                                      </a>
+                                    ) : null}
+                                    {day.videoId ? (
+                                      <button
+                                        type="button"
+                                        className="plan-action-button plan-action-button--ghost"
+                                        onClick={() => onClearVideo(day.dayNumber)}
+                                      >
+                                        Remove video
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="plan-day-card__hint">
+                              Upload a workout video and thumbnail for this day.
                             </p>
-                            {day.videoUrl ? (
-                              <a href={day.videoUrl} target="_blank" rel="noreferrer">
-                                Preview video
-                              </a>
-                            ) : null}
-                            {day.videoId ? (
-                              <button type="button" className="link-button" onClick={() => onClearVideo(day.dayNumber)}>
-                                Remove video
-                              </button>
-                            ) : null}
+                          )}
+
+                          <div className="plan-day-card__divider" />
+
+                          <div className="plan-day-card__upload-row">
+                            <label className="upload-field upload-field--inline">
+                              <span>Workout video</span>
+                              <div className="upload-picker">
+                                <span className="upload-picker__button">Choose file</span>
+                                <span className="upload-picker__text">
+                                  {day.videoFile?.name || day.videoTitle || 'No file chosen'}
+                                </span>
+                                <input
+                                  type="file"
+                                  className="upload-picker__input"
+                                  accept="video/*"
+                                  onChange={(event) =>
+                                    onSelectFile(day.dayNumber, 'videoFile', event.target.files?.[0] || null)
+                                  }
+                                />
+                              </div>
+                            </label>
+
+                            <label className="upload-field upload-field--inline">
+                              <span>Thumbnail</span>
+                              <div className="upload-picker">
+                                <span className="upload-picker__button">Choose file</span>
+                                <span className="upload-picker__text">
+                                  {day.thumbnailFile?.name ||
+                                    (day.videoThumbnail ? 'Existing thumbnail' : 'No file chosen')}
+                                </span>
+                                <input
+                                  type="file"
+                                  className="upload-picker__input"
+                                  accept="image/png,image/jpeg"
+                                  onChange={(event) =>
+                                    onSelectFile(day.dayNumber, 'thumbnailFile', event.target.files?.[0] || null)
+                                  }
+                                />
+                              </div>
+                            </label>
+                          </div>
+
+                          <div className="plan-day-card__status-row">
+                            <span
+                              className={`plan-pill ${uploadReady ? 'plan-pill--success' : 'plan-pill--warning'}`}
+                            >
+                              {uploadReady ? 'Video ready' : 'Awaiting video'}
+                            </span>
+                            <span
+                              className={`plan-pill ${thumbnailReady ? 'plan-pill--info' : 'plan-pill--muted'}`}
+                            >
+                              {thumbnailReady ? 'Thumbnail set' : 'Thumbnail missing'}
+                            </span>
                           </div>
                         </div>
-                      ) : (
-                        <p className="plan-day-card__hint">
-                          Upload a workout video and thumbnail for this day.
-                        </p>
                       )}
-                      <label className="upload-field">
-                        <span>Workout video</span>
-                        <input
-                          type="file"
-                          accept="video/*"
-                          onChange={(event) =>
-                            onSelectFile(day.dayNumber, 'videoFile', event.target.files?.[0] || null)
-                          }
-                        />
-                        {day.videoFile ? (
-                          <small className="upload-selected">Selected: {day.videoFile.name}</small>
-                        ) : null}
-                      </label>
-                      <label className="upload-field">
-                        <span>Thumbnail</span>
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg"
-                          onChange={(event) =>
-                            onSelectFile(day.dayNumber, 'thumbnailFile', event.target.files?.[0] || null)
-                          }
-                        />
-                        {day.thumbnailFile ? (
-                          <small className="upload-selected">Selected: {day.thumbnailFile.name}</small>
-                        ) : null}
-                      </label>
-                    </div>
-                  )}
-                </article>
-                ))}
+                    </article>
+                  )
+                })}
               </div>
             )}
           </>

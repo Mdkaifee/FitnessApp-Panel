@@ -973,8 +973,8 @@ function App() {
             uploadFileToSpaces(day.thumbnailFile, { folder: `${planFolder}/thumbnails` }),
           ])
           const videoPayload = {
-            body_part: 'FullBody',
-            gender: 'All',
+            body_part: '',
+            gender: '',
             title: `${scheduleProgram.title || 'Program'} · Day ${day.dayNumber}`,
             description: `Workout for day ${day.dayNumber}`,
             video_url: videoUpload.url,
