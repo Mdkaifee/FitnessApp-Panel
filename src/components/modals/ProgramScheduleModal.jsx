@@ -36,7 +36,12 @@ function ProgramScheduleModal({
                 <button type="button" className="secondary slim" onClick={onAutoRest}>
                   Auto rest pattern
                 </button>
-                <button type="button" className="primary slim" onClick={onSave} disabled={pending}>
+                <button
+                  type="button"
+                  className="primary slim theme-button"
+                  onClick={onSave}
+                  disabled={pending}
+                >
                   {pending ? 'Saving…' : 'Save schedule'}
                 </button>
               </div>

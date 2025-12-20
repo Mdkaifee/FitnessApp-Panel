@@ -109,6 +109,7 @@ const getEmptyOtpDigits = () => Array(OTP_LENGTH).fill('')
 
 const getDefaultProgramForm = () => ({
   id: '',
+  title: '',
   durationDays: '28',
   accessLevel: 'free',
   isActive: true,
@@ -213,11 +214,14 @@ const getPlanMediaFolder = (program) => {
 
 const buildProgramPayload = (form) => {
   const durationDays = parseIntValue(form.durationDays)
-  const accessLevel = form.accessLevel === 'paid' ? 'paid' : 'free'
-  const slug = buildPlanSlug(durationDays, accessLevel)
+  const normalizedTitle = typeof form.title === 'string' ? form.title.trim() : ''
+  const accessValue = typeof form.accessLevel === 'string' ? form.accessLevel.trim().toLowerCase() : 'free'
+  const accessLevel = accessValue === 'paid' ? 'paid' : 'free'
+  const slugFromTitle = normalizeProgramSlug(undefined, normalizedTitle)
+  const slug = slugFromTitle || buildPlanSlug(durationDays, accessLevel)
   return {
     slug,
-    title: durationDays > 0 ? `${durationDays}-Day Plan` : 'Program',
+    title: normalizedTitle || (durationDays > 0 ? `${durationDays}-Day Plan` : 'Program'),
     subtitle: null,
     description: null,
     duration_days: durationDays,
@@ -234,6 +238,12 @@ const buildProgramPayloadFromRecord = (program, overrides = {}) => {
   const durationDays = parseIntValue(
     overrides.durationDays ?? overrides.duration_days ?? program?.duration_days ?? 0,
   )
+  const normalizedTitle =
+    typeof overrides.title === 'string' && overrides.title.trim()
+      ? overrides.title.trim()
+      : typeof program?.title === 'string'
+        ? program.title.trim()
+        : ''
   const accessLevelRaw =
     overrides.accessLevel ??
     overrides.access_level ??
@@ -247,10 +257,14 @@ const buildProgramPayloadFromRecord = (program, overrides = {}) => {
       : typeof overrides.is_active === 'boolean'
         ? overrides.is_active
         : Boolean(program?.is_active ?? program?.isActive ?? true)
-  const slug = buildPlanSlug(durationDays, accessLevel)
+  const slug =
+    normalizeProgramSlug(overrides.slug, normalizedTitle) ||
+    normalizeProgramSlug(program?.slug, normalizedTitle) ||
+    normalizeProgramSlug(undefined, normalizedTitle) ||
+    buildPlanSlug(durationDays, accessLevel)
   return {
     slug,
-    title: durationDays > 0 ? `${durationDays}-Day Plan` : 'Program',
+    title: normalizedTitle || (durationDays > 0 ? `${durationDays}-Day Plan` : 'Program'),
     subtitle: null,
     description: null,
     duration_days: durationDays,
@@ -802,6 +816,7 @@ function App() {
     setProgramModalMode('edit')
     setProgramForm({
       id: program.id ?? '',
+      title: program.title ?? '',
       durationDays: String(program.duration_days ?? program.durationDays ?? ''),
       accessLevel: (program.access_level ?? program.accessLevel ?? 'free') === 'paid' ? 'paid' : 'free',
       isActive:
@@ -1002,11 +1017,27 @@ function App() {
 
   const handleProgramModalSubmit = useCallback(async () => {
     if (!token) return
-    const payload = buildProgramPayload(programForm)
-    if (!payload.title) {
-      setStatus({ type: 'error', text: 'Title is required.' })
+    const trimmedName = (programForm.title ?? '').trim()
+    if (!trimmedName) {
+      setStatus({ type: 'error', text: 'Plan name is required.' })
       return
     }
+    const parsedDays = parseIntValue(programForm.durationDays)
+    if (parsedDays <= 0) {
+      setStatus({ type: 'error', text: 'Number of days must be greater than 0.' })
+      return
+    }
+    const accessInput = (programForm.accessLevel ?? '').trim().toLowerCase()
+    if (accessInput !== 'free' && accessInput !== 'paid') {
+      setStatus({ type: 'error', text: 'Access type must be either "free" or "paid".' })
+      return
+    }
+    const payload = buildProgramPayload({
+      ...programForm,
+      title: trimmedName,
+      durationDays: String(parsedDays),
+      accessLevel: accessInput,
+    })
     const mode = programModalMode
     const identifier = mode === 'edit' ? programForm.id || programForm.slug : undefined
     if (mode === 'edit' && !identifier) return
@@ -2037,7 +2068,6 @@ useEffect(() => {
                   programs={programs}
                   isLoading={programsLoading}
                   error={programsError}
-                  onRefresh={loadPrograms}
                   onAddProgram={openCreateProgramModal}
                   onEditProgram={openEditProgramModal}
                   onDeleteProgram={handleDeleteProgram}

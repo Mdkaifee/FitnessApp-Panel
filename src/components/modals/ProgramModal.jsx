@@ -1,15 +1,5 @@
 import Modal from '../shared/Modal'
 
-const ACCESS_OPTIONS = [
-  { value: 'free', label: 'Free plan' },
-  { value: 'paid', label: 'Premium plan' },
-]
-
-const DAY_OPTIONS = [
-  { value: '28', label: '28-Day Journey' },
-  { value: '60', label: '60-Day Journey' },
-]
-
 function ProgramModal({ open, mode, form, setForm, pendingAction, onClose, onSubmit }) {
   if (!open) return null
 
@@ -36,30 +26,37 @@ function ProgramModal({ open, mode, form, setForm, pendingAction, onClose, onSub
       <form onSubmit={handleSubmit} className="modal-form plan-modal plan-modal--compact">
         <section className="plan-modal-section">
           <div className="plan-section-head">
-            <p className="plan-section-title">Plan basics</p>
+            {/* <p className="plan-section-title">Plan basics</p>
             <p className="plan-section-description">
               Choose the plan length and access level. Other details will auto-generate.
-            </p>
+            </p> */}
           </div>
           <div className="plan-field-grid plan-field-grid--compact">
             <label className="plan-field">
+              <span>Plan name</span>
+              <input
+                type="text"
+                value={form.title ?? ''}
+                onChange={handleInputChange('title')}
+                placeholder="e.g., 28-Day Plan"
+              />
+            </label>
+            <label className="plan-field">
               <span>Number of days</span>
-              <select value={form.durationDays} onChange={handleInputChange('durationDays')}>
-                {DAY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={form.durationDays ?? ''}
+                onChange={handleInputChange('durationDays')}
+                placeholder="e.g., 28"
+              />
             </label>
             <label className="plan-field">
               <span>Access type</span>
-              <select value={form.accessLevel} onChange={handleInputChange('accessLevel')}>
-                {ACCESS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+              <select value={form.accessLevel ?? 'free'} onChange={handleInputChange('accessLevel')}>
+                <option value="free">Free plan</option>
+                <option value="paid">Paid plan</option>
               </select>
             </label>
           </div>

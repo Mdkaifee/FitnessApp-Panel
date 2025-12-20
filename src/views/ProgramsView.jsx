@@ -38,7 +38,6 @@ function ProgramsView({
   programs,
   isLoading,
   error,
-  onRefresh,
   onAddProgram,
   onEditProgram,
   onDeleteProgram,
@@ -84,10 +83,7 @@ function ProgramsView({
     <div className="subscription-view">
       <div className="subscription-controls">
         <div className="subscription-actions">
-          <button className="secondary slim" onClick={onRefresh} disabled={isLoading}>
-            {isLoading ? 'Refreshing…' : 'Refresh'}
-          </button>
-          <button className="primary slim" onClick={onAddProgram}>
+          <button className="primary slim theme-button" onClick={onAddProgram}>
             Add program
           </button>
         </div>
@@ -101,7 +97,7 @@ function ProgramsView({
         <div className="empty-panel">
           <h3>No plans added</h3>
           <p>Add a plan to make it available for members in the app.</p>
-          <button className="primary" onClick={onAddProgram}>
+          <button className="primary theme-button" onClick={onAddProgram}>
             Create program
           </button>
         </div>
@@ -139,6 +135,7 @@ function ProgramsView({
                   </div>
                 </div>
                 <div className="plan-card__actions">
+                  <div className="plan-card__buttons">
                   <button
                     type="button"
                     className="plan-action"
@@ -167,6 +164,7 @@ function ProgramsView({
                     <img src={deleteIcon} alt="Delete program" />
                     <span>{pendingDelete ? 'Deleting…' : 'Delete'}</span>
                   </button>
+                  </div>
                   <label
                     className={`plan-toggle-control ${!active ? 'plan-toggle-control--inactive' : ''}`}
                     aria-live="polite"

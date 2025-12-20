@@ -2518,8 +2518,22 @@ button.secondary {
 
 .plan-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .plan-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .plan-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .plan-card {
@@ -2693,6 +2707,16 @@ button.secondary {
   justify-content: flex-end;
   gap: 12px;
   margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.plan-card__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 200px;
 }
 
 .plan-action {
@@ -2708,6 +2732,8 @@ button.secondary {
   color: #0f172a;
   cursor: pointer;
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -2992,7 +3018,7 @@ button.primary.slim {
 .plan-modal-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  /* gap: 16px; */
 }
 
 .plan-section-head {
@@ -3077,6 +3103,27 @@ button.primary.slim {
 @media (max-width: 640px) {
   .plan-field--full {
     grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .plan-card__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .plan-card__buttons {
+    justify-content: center;
+  }
+
+  .plan-action {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .plan-toggle-control {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -3169,6 +3216,16 @@ button.primary.slim {
 .plan-submit:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.theme-button {
+  background: linear-gradient(120deg, #fb6995, #f472b6);
+  color: #fff;
+  box-shadow: 0 15px 30px rgba(236, 72, 153, 0.25);
+}
+
+.theme-button:disabled {
+  opacity: 0.8;
 }
 
 .video-modal {
