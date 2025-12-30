@@ -17,6 +17,8 @@ function ProgramModal({ open, mode, form, setForm, pendingAction, onClose, onSub
     setForm((prev) => ({ ...prev, [field]: event.target.checked }))
   }
 
+  const isPaid = (form.accessLevel ?? 'free') === 'paid'
+
   return (
     <Modal
       open={open}
@@ -59,6 +61,20 @@ function ProgramModal({ open, mode, form, setForm, pendingAction, onClose, onSub
                 <option value="paid">Paid plan</option>
               </select>
             </label>
+            {isPaid ? (
+              <label className="plan-field">
+                <span>Price (USD)</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={form.priceUsd ?? ''}
+                  onChange={handleInputChange('priceUsd')}
+                  placeholder="e.g., 29.99"
+                />
+              </label>
+            ) : null}
           </div>
         </section>
 

@@ -28,6 +28,18 @@ const getAccessBadge = (program) => {
   return access === 'paid' ? 'Premium' : 'Free'
 }
 
+const isPaidProgram = (program) => {
+  const access = (program?.access_level ?? program?.accessLevel ?? 'free').toLowerCase()
+  return access === 'paid'
+}
+
+const formatPriceLabel = (program) => {
+  const raw = program?.price_usd ?? program?.priceUsd
+  const value = typeof raw === 'string' ? Number(raw) : raw
+  if (!Number.isFinite(value) || value <= 0) return '—'
+  return `$${value.toFixed(2)}`
+}
+
 const isProgramActive = (program) => {
   const explicit = program?.is_active
   if (typeof explicit === 'boolean') return explicit
@@ -129,6 +141,12 @@ function ProgramsView({
                     <span>Access type</span>
                     <strong>{getAccessBadge(program)}</strong>
                   </div>
+                  {isPaidProgram(program) ? (
+                    <div>
+                      <span>Price</span>
+                      <strong>{formatPriceLabel(program)}</strong>
+                    </div>
+                  ) : null}
                   <div>
                     <span>Visibility</span>
                     <strong>{active ? 'Active' : 'Hidden'}</strong>

@@ -115,6 +115,7 @@ const getDefaultProgramForm = () => ({
   title: '',
   durationDays: '28',
   accessLevel: 'free',
+  priceUsd: '',
   isActive: true,
 })
 
@@ -144,6 +145,12 @@ const getDefaultCategoryForm = () => ({
 const parseIntValue = (value) => {
   const parsed = parseInt(value, 10)
   return Number.isFinite(parsed) ? parsed : 0
+}
+
+const parseFloatValue = (value) => {
+  if (value === '' || value == null) return null
+  const parsed = parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 const normalizeProgramSlug = (slug, fallbackTitle) => {
@@ -220,6 +227,8 @@ const buildProgramPayload = (form) => {
   const normalizedTitle = typeof form.title === 'string' ? form.title.trim() : ''
   const accessValue = typeof form.accessLevel === 'string' ? form.accessLevel.trim().toLowerCase() : 'free'
   const accessLevel = accessValue === 'paid' ? 'paid' : 'free'
+  const rawPrice = parseFloatValue(form.priceUsd)
+  const priceUsd = accessLevel === 'paid' ? rawPrice : null
   const slugFromTitle = normalizeProgramSlug(undefined, normalizedTitle)
   const slug = slugFromTitle || buildPlanSlug(durationDays, accessLevel)
   return {
@@ -232,6 +241,7 @@ const buildProgramPayload = (form) => {
     rest_days_per_week: 0,
     level: null,
     access_level: accessLevel,
+    price_usd: priceUsd,
     cta_label: null,
     is_active: Boolean(form.isActive),
   }
@@ -254,6 +264,13 @@ const buildProgramPayloadFromRecord = (program, overrides = {}) => {
     program?.accessLevel ??
     'free'
   const accessLevel = accessLevelRaw === 'paid' ? 'paid' : 'free'
+  const rawPrice = parseFloatValue(
+    overrides.priceUsd ??
+      overrides.price_usd ??
+      program?.price_usd ??
+      program?.priceUsd,
+  )
+  const priceUsd = accessLevel === 'paid' ? rawPrice : null
   const nextActive =
     typeof overrides.isActive === 'boolean'
       ? overrides.isActive
@@ -275,6 +292,7 @@ const buildProgramPayloadFromRecord = (program, overrides = {}) => {
     rest_days_per_week: 0,
     level: null,
     access_level: accessLevel,
+    price_usd: priceUsd,
     cta_label: null,
     is_active: nextActive,
   }
@@ -857,6 +875,12 @@ function App() {
       title: program.title ?? '',
       durationDays: String(program.duration_days ?? program.durationDays ?? ''),
       accessLevel: (program.access_level ?? program.accessLevel ?? 'free') === 'paid' ? 'paid' : 'free',
+      priceUsd:
+        program.price_usd != null
+          ? String(program.price_usd)
+          : program.priceUsd != null
+            ? String(program.priceUsd)
+            : '',
       isActive:
         typeof program.is_active === 'boolean' ? program.is_active : program.isActive ?? true,
     })
@@ -1092,6 +1116,11 @@ function App() {
     const accessInput = (programForm.accessLevel ?? '').trim().toLowerCase()
     if (accessInput !== 'free' && accessInput !== 'paid') {
       setStatus({ type: 'error', text: 'Access type must be either "free" or "paid".' })
+      return
+    }
+    const priceValue = parseFloatValue(programForm.priceUsd)
+    if (accessInput === 'paid' && (priceValue == null || priceValue <= 0)) {
+      setStatus({ type: 'error', text: 'Enter a price in USD for paid plans.' })
       return
     }
     const payload = buildProgramPayload({
