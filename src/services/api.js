@@ -103,6 +103,18 @@ export const fetchVideosByCategory = (category, token, page = 1, pageSize = 20, 
   })
 }
 
+export const fetchExerciseLibrary = (token) =>
+  apiRequest('/exercise-library/admin', {
+    token,
+  })
+
+export const updateExerciseLibraryItem = (itemId, payload, token) =>
+  apiRequest(`/exercise-library/${itemId}`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
 export const uploadVideo = (payload, token) =>
   apiRequest('/videos/upload', {
     method: 'POST',

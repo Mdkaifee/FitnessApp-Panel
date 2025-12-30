@@ -8,6 +8,8 @@ import {
   fetchProfile,
   fetchUsersPaginated,
   fetchVideosByCategory,
+  fetchExerciseLibrary,
+  updateExerciseLibraryItem,
   uploadVideo,
   updateVideo,
   deleteVideo,
@@ -59,6 +61,7 @@ import AuthView from './views/AuthView'
 import DashboardView from './views/DashboardView'
 import UsersView from './views/UsersView'
 import VideosView, { ALL_VIDEOS_CATEGORY } from './views/VideosView'
+import ExerciseLibraryView from './views/ExerciseLibraryView'
 import QuestionsView from './views/QuestionsView'
 import ProgramsView from './views/ProgramsView'
 import FoodsView from './views/FoodsView'
@@ -349,6 +352,10 @@ function App() {
   const [videosError, setVideosError] = useState(null)
   const [videoPage, setVideoPage] = useState(1)
   const [videoPending, setVideoPending] = useState('')
+  const [exerciseLibraryItems, setExerciseLibraryItems] = useState([])
+  const [exerciseLibraryLoading, setExerciseLibraryLoading] = useState(false)
+  const [exerciseLibraryError, setExerciseLibraryError] = useState('')
+  const [exerciseLibraryPendingId, setExerciseLibraryPendingId] = useState('')
   const [videoForm, setVideoForm] = useState(getDefaultVideoForm)
   const [videoModalMode, setVideoModalMode] = useState('create')
   const [isVideoModalOpen, setVideoModalOpen] = useState(false)
@@ -372,6 +379,7 @@ function App() {
           if (!trimmed) return []
           return [trimmed, `${trimmed}/thumbnails`]
         })
+        folders.push('exercise-library')
         await ensureSpacesFolders(folders)
       } catch (error) {
         console.error('Failed to ensure Spaces category folders', error)
@@ -451,6 +459,11 @@ function App() {
           title: '',
           description: '',
         }
+      case 'exerciseLibrary':
+        return {
+          title: 'Exercise Library',
+          description: 'Manage home screen card titles and cover images.',
+        }
       case 'questions':
         return {
           title: '',
@@ -505,6 +518,10 @@ function App() {
     setUserAnalyticsError('')
     setUserAnalyticsOpen(false)
     setUserAnalyticsLoading(false)
+    setExerciseLibraryItems([])
+    setExerciseLibraryError('')
+    setExerciseLibraryLoading(false)
+    setExerciseLibraryPendingId('')
     setActiveView('login')
     setHasRequestedOtp(false)
     setResendSeconds(0)
@@ -719,6 +736,27 @@ function App() {
     [handleApiError, token],
   )
 
+  const loadExerciseLibrary = useCallback(async () => {
+    if (!token) return
+    setExerciseLibraryLoading(true)
+    setExerciseLibraryError('')
+    try {
+      const response = await fetchExerciseLibrary(token)
+      const payload = response?.data ?? {}
+      const items = Array.isArray(payload?.items)
+        ? payload.items
+        : Array.isArray(payload)
+          ? payload
+          : []
+      setExerciseLibraryItems(items)
+    } catch (error) {
+      setExerciseLibraryError(error?.message ?? 'Unable to load exercise library.')
+      handleApiError(error)
+    } finally {
+      setExerciseLibraryLoading(false)
+    }
+  }, [handleApiError, token])
+
   const loadQuestions = useCallback(async () => {
     if (!token) return
     setQuestionsLoading(true)
@@ -863,6 +901,7 @@ function App() {
   }, [])
 
   const handleToggleDayRest = useCallback((dayNumber, isRestDay) => {
+    setScheduleError('')
     setScheduleDays((prev) =>
       prev.map((day) =>
         day.dayNumber === dayNumber
@@ -886,6 +925,7 @@ function App() {
   }, [])
 
   const handleSelectDayFile = useCallback((dayNumber, field, file) => {
+    setScheduleError('')
     setScheduleDays((prev) =>
       prev.map((day) =>
         day.dayNumber === dayNumber
@@ -899,6 +939,7 @@ function App() {
   }, [])
 
   const handleClearDayVideo = useCallback((dayNumber) => {
+    setScheduleError('')
     setScheduleDays((prev) =>
       prev.map((day) =>
         day.dayNumber === dayNumber
@@ -917,11 +958,17 @@ function App() {
   }, [])
 
   const handleAutoRestDays = useCallback(() => {
+    setScheduleError('')
     setScheduleDays((prev) =>
       prev.map((day) => {
-        const mod = day.dayNumber % 7
-        const shouldRest = mod === 0 || mod === 6
-        if (!shouldRest) return day
+        const patternIndex = (day.dayNumber - 1) % 7
+        const shouldRest = patternIndex == 2 || patternIndex == 6
+        if (!shouldRest) {
+          return {
+            ...day,
+            isRestDay: false,
+          }
+        }
         return {
           ...day,
           isRestDay: true,
@@ -941,6 +988,21 @@ function App() {
     if (scheduleDays.length === 0) {
       setScheduleError('Add at least one day to the plan.')
       return
+    }
+    for (const day of scheduleDays) {
+      if (day.isRestDay) continue
+      const hasExistingVideo = Boolean(day.videoId)
+      const hasVideoFile = Boolean(day.videoFile)
+      const hasThumbnailFile = Boolean(day.thumbnailFile)
+      const wantsUpload = hasVideoFile || hasThumbnailFile
+      if (wantsUpload && !(hasVideoFile && hasThumbnailFile)) {
+        setScheduleError(`Day ${day.dayNumber}: select both a video and thumbnail.`)
+        return
+      }
+      if (!hasExistingVideo && !wantsUpload) {
+        setScheduleError(`Day ${day.dayNumber} requires a workout video.`)
+        return
+      }
     }
     const identifier = scheduleProgram.id ?? scheduleProgram.slug
     if (!identifier) {
@@ -1361,6 +1423,12 @@ useEffect(() => {
   }
 }, [activeView, isLoggedIn, loadVideos, videoCategory, videoGender])
 
+useEffect(() => {
+  if (isLoggedIn && activeView === 'exerciseLibrary') {
+    loadExerciseLibrary()
+  }
+}, [activeView, isLoggedIn, loadExerciseLibrary])
+
   useEffect(() => {
     if (isLoggedIn && activeView === 'questions') {
       loadQuestions()
@@ -1711,6 +1779,43 @@ useEffect(() => {
     }
   }
 
+  const handleExerciseLibrarySave = useCallback(
+    async (itemId, { title, file } = {}) => {
+      if (!token) return false
+      setExerciseLibraryPendingId(String(itemId))
+      try {
+        let coverUrl = ''
+        if (file) {
+          const uploaded = await uploadFileToSpaces(file, { folder: 'exercise-library' })
+          coverUrl = uploaded?.url ?? ''
+        }
+        const payload = {}
+        if (typeof title === 'string' && title.trim()) {
+          payload.title = title.trim()
+        }
+        if (coverUrl) {
+          payload.cover_image_url = coverUrl
+        }
+        if (Object.keys(payload).length === 0) {
+          return true
+        }
+        const response = await updateExerciseLibraryItem(itemId, payload, token)
+        setStatus({
+          type: 'success',
+          text: response?.message ?? 'Exercise library item updated.',
+        })
+        await loadExerciseLibrary()
+        return true
+      } catch (error) {
+        handleApiError(error)
+        return false
+      } finally {
+        setExerciseLibraryPendingId('')
+      }
+    },
+    [handleApiError, loadExerciseLibrary, token],
+  )
+
   const createEmptyOption = () => ({ id: '', optionText: '', value: '', isActive: true })
   const usesOptions = (type) => type === 'single_choice' || type === 'multi_choice'
 
@@ -2047,6 +2152,15 @@ useEffect(() => {
                   totalPages={videoPageCount}
                   onPageChange={handleVideosPageChange}
                   onUploadVideo={openCreateVideoModal}
+                />
+              )}
+              {activeView === 'exerciseLibrary' && (
+                <ExerciseLibraryView
+                  items={exerciseLibraryItems}
+                  isLoading={exerciseLibraryLoading}
+                  error={exerciseLibraryError}
+                  pendingId={exerciseLibraryPendingId}
+                  onSave={handleExerciseLibrarySave}
                 />
               )}
               {activeView === 'questions' && (

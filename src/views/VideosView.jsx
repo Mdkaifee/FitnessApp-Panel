@@ -12,6 +12,10 @@ const normalizeKey = (value) => {
 }
 
 const collapseKey = (value) => normalizeKey(value).replace(/[^a-z0-9]/g, '')
+const CATEGORY_LABEL_LOOKUP = VIDEO_CATEGORIES.reduce((acc, category) => {
+  acc[normalizeKey(category.value)] = category.label
+  return acc
+}, {})
 
 export const ALL_VIDEOS_CATEGORY = '__all__'
 
@@ -126,6 +130,7 @@ function VideosView({
     onGenderChange?.(value)
   }
 
+
   const currentBodyPartValue = videoCategory === ALL_VIDEOS_CATEGORY ? '' : videoCategory
   const normalizedBodyPartFilter = normalizeKey(currentBodyPartValue)
   const normalizedGenderFilter = normalizeKey(videoGender)
@@ -227,7 +232,9 @@ function VideosView({
             {filteredList.map((video) => {
               const durationLabel = formatDuration(video)
               const genderIcon = getGenderIcon(video.gender)
-              const categoryLabel = video.body_part ?? '—'
+              const rawCategory = video.body_part ?? video.bodyPart ?? ''
+              const categoryLabel =
+                CATEGORY_LABEL_LOOKUP[normalizeKey(rawCategory)] ?? rawCategory ?? '—'
               return (
                 <div className="video-card" key={video.id}>
                   <div className="video-thumb">

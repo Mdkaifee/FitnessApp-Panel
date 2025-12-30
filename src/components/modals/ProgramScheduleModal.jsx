@@ -23,10 +23,9 @@ function ProgramScheduleModal({
       <div className="plan-schedule-modal">
         {loading ? (
           <div className="loading-panel">Loading schedule…</div>
-        ) : error ? (
-          <div className="error-banner">{error}</div>
         ) : (
           <>
+            {error ? <div className="error-banner">{error}</div> : null}
             <div className="plan-schedule-toolbar">
               <div className="plan-schedule-toolbar__actions">
                 <button type="button" className="secondary slim" onClick={onAutoRest}>

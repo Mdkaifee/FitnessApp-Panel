@@ -1677,6 +1677,128 @@ button.secondary {
   gap: 18px;
 }
 
+.exercise-library-panel {
+  background: #fff;
+  border: 1px solid #f1f5f9;
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.exercise-library-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.exercise-library-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.exercise-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.exercise-library-card {
+  border: none;
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+}
+
+.exercise-library-cover {
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exercise-library-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.exercise-library-cover-placeholder {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.exercise-library-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exercise-library-slug {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.exercise-library-meta input {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.exercise-library-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.exercise-library-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.exercise-library-upload input {
+  display: none;
+}
+
+.exercise-library-actions button {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  background: linear-gradient(120deg, #fb6995, #f472b6);
+  color: #fff;
+  cursor: pointer;
+}
+
+.exercise-library-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .videos-filter-card {
   display: flex;
   align-items: center;

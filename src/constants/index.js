@@ -5,6 +5,7 @@ export const WORKSPACE_VIEWS = new Set([
   'dashboard',
   'users',
   'videos',
+  'exerciseLibrary',
   'questions',
   'programs',
   'foods',
@@ -18,6 +19,7 @@ export const WORKSPACE_VIEW_ROUTES = {
   dashboard: '/dashboard',
   users: '/users',
   videos: '/videos',
+  exerciseLibrary: '/exercise-library',
   questions: '/questions',
   programs: '/programs',
   foods: '/foods',
@@ -43,8 +45,8 @@ export const VIDEO_CATEGORIES = [
   { label: 'Arms', value: 'Arms' },
   { label: 'Legs', value: 'Legs' },
   { label: 'Full Body', value: 'FullBody' },
-  { label: 'Full Body Strength(20 min Video)', value: 'FullBodyStrength' },
-  { label: 'Sport Nutrition(20 min Video)', value: 'SportNutrition' },
+  { label: 'FREE WORKOUT #1', value: 'FullBodyStrength' },
+  { label: 'FREE WORKOUT #2', value: 'SportNutrition' },
 ]
 
 export const VIDEO_GENDERS = [
