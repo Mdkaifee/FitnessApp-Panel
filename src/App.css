@@ -4074,6 +4074,7 @@ button.primary.slim {
   padding: 16px;
   font-size: 13px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+  text-align: left;
 }
 
 .data-table th.align-left,
@@ -4089,6 +4090,18 @@ button.primary.slim {
 .data-table th.align-right,
 .data-table td.align-right {
   text-align: right;
+}
+
+.data-table th.status-cell,
+.data-table td.status-cell {
+  text-align: left !important;
+}
+
+.data-table .status-cell-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: auto;
 }
 
 

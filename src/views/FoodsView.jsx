@@ -14,7 +14,6 @@ function FoodsView({
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
-  onRefresh,
 }) {
   const items = foodsData?.items ?? []
   const handleSearchChange = (event) => {
@@ -22,9 +21,6 @@ function FoodsView({
   }
   const handleCategoryChange = (event) => {
     onFiltersChange?.({ ...filters, categoryId: event.target.value })
-  }
-  const handleIncludeInactiveChange = (event) => {
-    onFiltersChange?.({ ...filters, includeInactive: event.target.checked })
   }
 
   return (
@@ -61,22 +57,11 @@ function FoodsView({
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
-                {!cat.is_active ? ' (archived)' : ''}
+                {!cat.is_active ? ' (inactive)' : ''}
               </option>
             ))}
           </select>
         </label>
-        <label className="filter-checkbox">
-          <input
-            type="checkbox"
-            checked={filters.includeInactive}
-            onChange={handleIncludeInactiveChange}
-          />
-          <span>Include archived</span>
-        </label>
-        <button type="button" className="ghost" onClick={onRefresh}>
-          Refresh
-        </button>
       </section>
 
       <section className="foods-table-card">
@@ -97,8 +82,10 @@ function FoodsView({
                 <th>Category</th>
                 <th>Calories / serving</th>
                 <th>Macros (g)</th>
-                <th>Status</th>
-                <th />
+                <th className="align-left status-cell">
+                  <div className="status-cell-content">Status</div>
+                </th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -121,21 +108,19 @@ function FoodsView({
                       <span>F {food.fat != null ? food.fat.toFixed(1) : '—'}</span>
                     </div>
                   </td>
-                  <td>
-                    <span className={`status-pill ${food.is_active ? 'success' : 'muted'}`}>
-                      {food.is_active ? 'Active' : 'Archived'}
-                    </span>
+                  <td className="align-left status-cell">
+                    <div className="status-cell-content">
+                      <span className={`status-pill ${food.is_active ? 'success' : 'muted'}`}>
+                        {food.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   </td>
                   <td>
                     <div className="table-actions">
                       <button type="button" aria-label="Edit food" onClick={() => onEditFood(food)}>
                         <img src={editIcon} alt="" />
                       </button>
-                      <button
-                        type="button"
-                        aria-label="Archive food"
-                        onClick={() => onDeleteFood(food)}
-                      >
+                      <button type="button" aria-label="Delete food" onClick={() => onDeleteFood(food)}>
                         <img src={deleteIcon} alt="" />
                       </button>
                     </div>
@@ -159,33 +144,29 @@ function FoodsView({
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Slug</th>
-                <th>Sort</th>
-                <th>Status</th>
-                <th />
+                <th className="align-left status-cell">
+                  <div className="status-cell-content">Status</div>
+                </th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {categories.map((cat) => (
                 <tr key={cat.id}>
                   <td>{cat.name}</td>
-                  <td>{cat.slug}</td>
-                  <td>{cat.sort_order}</td>
-                  <td>
-                    <span className={`status-pill ${cat.is_active ? 'success' : 'muted'}`}>
-                      {cat.is_active ? 'Active' : 'Archived'}
-                    </span>
+                  <td className="align-left status-cell">
+                    <div className="status-cell-content">
+                      <span className={`status-pill ${cat.is_active ? 'success' : 'muted'}`}>
+                        {cat.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   </td>
                   <td>
                     <div className="table-actions">
                       <button type="button" aria-label="Edit category" onClick={() => onEditCategory(cat)}>
                         <img src={editIcon} alt="" />
                       </button>
-                      <button
-                        type="button"
-                        aria-label="Archive category"
-                        onClick={() => onDeleteCategory(cat)}
-                      >
+                      <button type="button" aria-label="Delete category" onClick={() => onDeleteCategory(cat)}>
                         <img src={deleteIcon} alt="" />
                       </button>
                     </div>

@@ -39,32 +39,12 @@ function FoodCategoryModal({
         </label>
 
         <label className="modal-field">
-          <span>Slug</span>
-          <input
-            type="text"
-            value={form.slug}
-            onChange={(event) => handleChange('slug', event.target.value)}
-            placeholder="Auto-generated if blank"
-          />
-        </label>
-
-        <label className="modal-field">
           <span>Description</span>
           <textarea
             value={form.description}
             onChange={(event) => handleChange('description', event.target.value)}
             rows={3}
             placeholder="Shown to admins only"
-          />
-        </label>
-
-        <label className="modal-field">
-          <span>Sort order</span>
-          <input
-            type="number"
-            step="1"
-            value={form.sortOrder}
-            onChange={(event) => handleChange('sortOrder', event.target.value)}
           />
         </label>
 

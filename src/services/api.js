@@ -254,7 +254,7 @@ export const updateFoodCategory = (categoryId, payload, token) =>
     token,
   })
 
-export const archiveFoodCategory = (categoryId, token) =>
+export const deleteFoodCategory = (categoryId, token) =>
   apiRequest(`/nutrition/admin/categories/${categoryId}`, {
     method: 'DELETE',
     token,
@@ -285,7 +285,7 @@ export const updateFood = (foodId, payload, token) =>
     token,
   })
 
-export const archiveFood = (foodId, token) =>
+export const deleteFood = (foodId, token) =>
   apiRequest(`/nutrition/admin/foods/${foodId}`, {
     method: 'DELETE',
     token,

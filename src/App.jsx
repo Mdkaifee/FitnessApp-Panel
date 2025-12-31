@@ -29,11 +29,11 @@ import {
   fetchFoodCategoriesAdmin,
   createFoodCategory,
   updateFoodCategory,
-  archiveFoodCategory,
+  deleteFoodCategory,
   fetchFoodsAdmin,
   createFood,
   updateFood,
-  archiveFood,
+  deleteFood,
 } from './services/api'
 import { uploadFileToSpaces, ensureSpacesFolders } from './services/spaces'
 import './App.css'
@@ -136,9 +136,7 @@ const getDefaultFoodForm = () => ({
 const getDefaultCategoryForm = () => ({
   id: '',
   name: '',
-  slug: '',
   description: '',
-  sortOrder: '0',
   isActive: true,
 })
 
@@ -443,7 +441,6 @@ function App() {
   const [foodFilters, setFoodFilters] = useState({
     search: '',
     categoryId: '',
-    includeInactive: false,
   })
   const [foodModalMode, setFoodModalMode] = useState('create')
   const [isFoodModalOpen, setFoodModalOpen] = useState(false)
@@ -837,7 +834,7 @@ function App() {
           {
             search: nextFilters.search,
             categoryId: nextFilters.categoryId,
-            includeInactive: nextFilters.includeInactive,
+            includeInactive: true,
             page: 1,
             pageSize: 100,
           },
@@ -1288,15 +1285,15 @@ function App() {
     }
   }, [foodForm, foodModalMode, handleApiError, loadFoodCategories, loadFoods, token])
 
-  const handleFoodArchive = useCallback(
+  const handleFoodDelete = useCallback(
     async (food) => {
       if (!token || !food) return
       const result = await Swal.fire({
-        title: `Archive ${food.product_name ?? 'this food'}?`,
-        text: 'Users will no longer see it in the manual food library.',
+        title: `Delete ${food.product_name ?? 'this food'}?`,
+        text: 'This will permanently remove it from the database.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Archive',
+        confirmButtonText: 'Delete',
         cancelButtonText: 'Cancel',
         confirmButtonColor: '#ec4899',
         cancelButtonColor: '#94a3b8',
@@ -1304,8 +1301,8 @@ function App() {
       })
       if (!result.isConfirmed) return
       try {
-        await archiveFood(food.id, token)
-        setStatus({ type: 'success', text: 'Food archived.' })
+        await deleteFood(food.id, token)
+        setStatus({ type: 'success', text: 'Food deleted.' })
         loadFoods()
       } catch (error) {
         handleApiError(error)
@@ -1326,9 +1323,7 @@ function App() {
     setCategoryForm({
       id: category.id,
       name: category.name ?? '',
-      slug: category.slug ?? '',
       description: category.description ?? '',
-      sortOrder: String(category.sort_order ?? 0),
       isActive: Boolean(category.is_active ?? true),
     })
     setCategoryModalOpen(true)
@@ -1346,9 +1341,7 @@ function App() {
     }
     const payload = {
       name: categoryForm.name.trim(),
-      slug: categoryForm.slug?.trim() || null,
       description: categoryForm.description?.trim() || null,
-      sort_order: Number.parseInt(categoryForm.sortOrder, 10) || 0,
       is_active: Boolean(categoryForm.isActive),
     }
     setCategoryPending('saving')
@@ -1369,15 +1362,15 @@ function App() {
     }
   }, [categoryForm, categoryModalMode, handleApiError, loadFoodCategories, token])
 
-  const handleCategoryArchive = useCallback(
+  const handleCategoryDelete = useCallback(
     async (category) => {
       if (!token || !category) return
       const result = await Swal.fire({
-        title: `Archive ${category.name}?`,
-        text: 'Foods will remain but the category will be hidden from filters.',
+        title: `Delete ${category.name}?`,
+        text: 'Foods in this category will be left uncategorized.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Archive category',
+        confirmButtonText: 'Delete category',
         cancelButtonText: 'Cancel',
         confirmButtonColor: '#ec4899',
         cancelButtonColor: '#94a3b8',
@@ -1385,8 +1378,8 @@ function App() {
       })
       if (!result.isConfirmed) return
       try {
-        await archiveFoodCategory(category.id, token)
-        setStatus({ type: 'success', text: 'Category archived.' })
+        await deleteFoodCategory(category.id, token)
+        setStatus({ type: 'success', text: 'Category deleted.' })
         loadFoodCategories()
         loadFoods()
       } catch (error) {
@@ -2229,14 +2222,10 @@ useEffect(() => {
                   onFiltersChange={handleFoodFiltersChange}
                   onAddFood={openCreateFoodModal}
                   onEditFood={openEditFoodModal}
-                  onDeleteFood={handleFoodArchive}
+                  onDeleteFood={handleFoodDelete}
                   onAddCategory={openCreateCategoryModal}
                   onEditCategory={openEditCategoryModal}
-                  onDeleteCategory={handleCategoryArchive}
-                  onRefresh={() => {
-                    loadFoods()
-                    loadFoodCategories()
-                  }}
+                  onDeleteCategory={handleCategoryDelete}
                 />
               )}
               {activeView === 'privacyPolicy' && <PrivacyPolicyView />}
