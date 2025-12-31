@@ -3100,6 +3100,10 @@ button.primary.slim {
   margin-top: 24px;
 }
 
+.modal-actions .theme-button {
+  box-shadow: none;
+}
+
 .modal-section {
   border: 1px solid var(--color-border);
   border-radius: 16px;

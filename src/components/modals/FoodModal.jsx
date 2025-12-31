@@ -142,7 +142,7 @@ function FoodModal({
           <button type="button" className="secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" disabled={!ready || pendingAction}>
+          <button type="submit" className="theme-button" disabled={!ready || pendingAction}>
             {pendingAction ? 'Saving…' : mode === 'edit' ? 'Save Food' : 'Add Food'}
           </button>
         </div>
