@@ -13,9 +13,31 @@ function FoodModal({
   if (!open) return null
   const title = mode === 'edit' ? 'Update Food' : 'Add Food'
   const ready = form.name.trim().length > 0 && Number(form.calories) > 0
+  const isUploading = pendingAction === 'uploading'
+  const isSaving = Boolean(pendingAction)
+  const primaryLabel = isUploading
+    ? 'Uploading…'
+    : pendingAction
+      ? 'Saving…'
+      : mode === 'edit'
+        ? 'Save Food'
+        : 'Add Food'
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0] ?? null
+    setForm((prev) => ({ ...prev, imageFile: file }))
+  }
+
+  const handleClearImageFile = () => {
+    setForm((prev) => ({ ...prev, imageFile: null }))
+  }
+
+  const handleRemoveImageUrl = () => {
+    setForm((prev) => ({ ...prev, imageUrl: '' }))
   }
 
   return (
@@ -47,6 +69,30 @@ function FoodModal({
             onChange={(event) => handleChange('brand', event.target.value)}
             placeholder="Optional"
           />
+        </label>
+
+        <label className="modal-field">
+          <span>Food image (optional)</span>
+          <input type="file" accept="image/*" onChange={handleFileChange} />
+          {form.imageFile ? (
+            <div className="food-image-selected">
+              <span>Selected: {form.imageFile.name}</span>
+              <button type="button" className="secondary slim" onClick={handleClearImageFile}>
+                Clear
+              </button>
+            </div>
+          ) : null}
+          {!form.imageFile && form.imageUrl ? (
+            <div className="food-image-preview">
+              <img src={form.imageUrl} alt="Food preview" />
+              <button type="button" className="secondary slim" onClick={handleRemoveImageUrl}>
+                Remove image
+              </button>
+            </div>
+          ) : null}
+          {!form.imageFile && !form.imageUrl ? (
+            <span className="field-hint">Upload a JPG or PNG to show in the app.</span>
+          ) : null}
         </label>
 
         <div className="modal-field-row">
@@ -142,8 +188,8 @@ function FoodModal({
           <button type="button" className="secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="theme-button" disabled={!ready || pendingAction}>
-            {pendingAction ? 'Saving…' : mode === 'edit' ? 'Save Food' : 'Add Food'}
+          <button type="submit" className="theme-button" disabled={!ready || isSaving}>
+            {primaryLabel}
           </button>
         </div>
       </form>

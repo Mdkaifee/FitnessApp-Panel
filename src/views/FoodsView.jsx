@@ -92,12 +92,24 @@ function FoodsView({
               {items.map((food) => (
                 <tr key={food.id}>
                   <td>
-                    <div className="table-primary-text">{food.product_name}</div>
-                    {food.serving_quantity ? (
-                      <div className="table-secondary-text">
-                        {food.serving_quantity} {food.serving_unit ?? 'serving'}
+                    <div className="food-name-cell">
+                      <div>
+                        <div className="table-primary-text">{food.product_name}</div>
+                        {food.serving_quantity ? (
+                          <div className="table-secondary-text">
+                            {food.serving_quantity} {food.serving_unit ?? 'serving'}
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
+                      {food.image_url ? (
+                        <img
+                          className="food-image-thumb"
+                          src={food.image_url}
+                          alt={food.product_name ?? 'Food'}
+                          loading="lazy"
+                        />
+                      ) : null}
+                    </div>
                   </td>
                   <td>{food.category_name ?? '—'}</td>
                   <td>{food.calories != null ? `${food.calories.toFixed(0)} kcal` : '—'}</td>

@@ -123,6 +123,8 @@ const getDefaultFoodForm = () => ({
   id: '',
   name: '',
   brand: '',
+  imageUrl: '',
+  imageFile: null,
   calories: '',
   protein: '',
   carbs: '',
@@ -132,6 +134,8 @@ const getDefaultFoodForm = () => ({
   categoryId: '',
   isActive: true,
 })
+
+const FOOD_IMAGE_FOLDER = 'food-images'
 
 const getDefaultCategoryForm = () => ({
   id: '',
@@ -1226,6 +1230,8 @@ function App() {
       id: food.id,
       name: food.product_name ?? '',
       brand: food.brand ?? '',
+      imageUrl: food.image_url ?? '',
+      imageFile: null,
       calories: food.calories != null ? String(food.calories) : '',
       protein: food.protein != null ? String(food.protein) : '',
       carbs: food.carbs != null ? String(food.carbs) : '',
@@ -1254,20 +1260,29 @@ function App() {
       const parsed = parseFloat(value)
       return Number.isNaN(parsed) ? null : parsed
     }
-    const payload = {
-      product_name: foodForm.name.trim(),
-      brand: foodForm.brand.trim() || null,
-      calories: caloriesValue,
-      protein: toNumber(foodForm.protein),
-      carbs: toNumber(foodForm.carbs),
-      fat: toNumber(foodForm.fat),
-      serving_quantity: toNumber(foodForm.servingQuantity) ?? 1,
-      serving_unit: foodForm.servingUnit?.trim() || 'serving',
-      category_id: foodForm.categoryId ? Number(foodForm.categoryId) : null,
-      is_active: Boolean(foodForm.isActive),
-    }
     setFoodPending('saving')
     try {
+      let imageUrl = foodForm.imageUrl?.trim() || ''
+      if (foodForm.imageFile) {
+        setFoodPending('uploading')
+        await ensureSpacesFolders([FOOD_IMAGE_FOLDER])
+        const { url } = await uploadFileToSpaces(foodForm.imageFile, { folder: FOOD_IMAGE_FOLDER })
+        imageUrl = url
+      }
+      const payload = {
+        product_name: foodForm.name.trim(),
+        brand: foodForm.brand.trim() || null,
+        calories: caloriesValue,
+        protein: toNumber(foodForm.protein),
+        carbs: toNumber(foodForm.carbs),
+        fat: toNumber(foodForm.fat),
+        serving_quantity: toNumber(foodForm.servingQuantity) ?? 1,
+        serving_unit: foodForm.servingUnit?.trim() || 'serving',
+        image_url: imageUrl || null,
+        category_id: foodForm.categoryId ? Number(foodForm.categoryId) : null,
+        is_active: Boolean(foodForm.isActive),
+      }
+      setFoodPending('saving')
       if (foodModalMode === 'edit' && foodForm.id) {
         const response = await updateFood(foodForm.id, payload, token)
         setStatus({ type: 'success', text: response?.message ?? 'Food updated.' })

@@ -2981,6 +2981,30 @@ button.primary.slim {
   color: var(--color-muted);
 }
 
+.food-image-selected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.food-image-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.food-image-preview img {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+}
+
 .text-success {
   color: var(--color-success);
 }
@@ -4102,6 +4126,21 @@ button.primary.slim {
   align-items: center;
   justify-content: flex-start;
   width: auto;
+}
+
+.food-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.food-image-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 
