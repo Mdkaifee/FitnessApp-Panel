@@ -4,10 +4,10 @@ import { Bar } from 'react-chartjs-2'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
-const COLOR_PALETTE = ['#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6', '#f97316']
+const COLOR_PALETTE = ['#FA99B5', '#3b82f6', '#8b5cf6', '#14b8a6', '#f97316']
 
 const GENDER_COLOR_MAP = {
-  female: '#ec4899',
+  female: '#FA99B5',
   male: '#3b82f6',
   all: '#8b5cf6',
   other: '#a3a3a3',

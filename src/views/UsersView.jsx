@@ -93,7 +93,7 @@ function UsersView({
                         <button
                           type="button"
                           className="user-email-button"
-                          onClick={() => onViewAnalytics?.(user)}
+                          // onClick={() => onViewAnalytics?.(user)}
                         >
                           {user.email}
                         </button>
@@ -125,7 +125,7 @@ function UsersView({
                     <td className="align-right">
                       <button
                         type="button"
-                        className="link-button"
+                        className={`link-button${user.is_active ? ' link-button--ghost' : ''}`}
                         disabled={isActionDisabled}
                         onClick={() => onToggleStatus?.(user.id, !user.is_active)}
                       >

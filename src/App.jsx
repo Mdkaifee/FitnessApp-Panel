@@ -1310,7 +1310,7 @@ function App() {
         showCancelButton: true,
         confirmButtonText: 'Delete',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#ec4899',
+        confirmButtonColor: '#FA99B5',
         cancelButtonColor: '#94a3b8',
         reverseButtons: true,
       })
@@ -1387,7 +1387,7 @@ function App() {
         showCancelButton: true,
         confirmButtonText: 'Delete category',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#ec4899',
+        confirmButtonColor: '#FA99B5',
         cancelButtonColor: '#94a3b8',
         reverseButtons: true,
       })
