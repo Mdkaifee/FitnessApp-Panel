@@ -290,3 +290,32 @@ export const deleteFood = (foodId, token) =>
     method: 'DELETE',
     token,
   })
+
+export const fetchMealsAdmin = ({ includeInactive = true } = {}, token) => {
+  const params = new URLSearchParams()
+  if (includeInactive) {
+    params.append('include_inactive', 'true')
+  }
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return apiRequest(`/nutrition/admin/meals${query}`, { token })
+}
+
+export const createMeal = (payload, token) =>
+  apiRequest('/nutrition/admin/meals', {
+    method: 'POST',
+    body: payload,
+    token,
+  })
+
+export const updateMeal = (mealId, payload, token) =>
+  apiRequest(`/nutrition/admin/meals/${mealId}`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
+export const deleteMeal = (mealId, token) =>
+  apiRequest(`/nutrition/admin/meals/${mealId}`, {
+    method: 'DELETE',
+    token,
+  })

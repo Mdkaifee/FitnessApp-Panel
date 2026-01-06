@@ -34,6 +34,10 @@ import {
   createFood,
   updateFood,
   deleteFood,
+  fetchMealsAdmin,
+  createMeal,
+  updateMeal,
+  deleteMeal,
 } from './services/api'
 import { uploadFileToSpaces, ensureSpacesFolders } from './services/spaces'
 import './App.css'
@@ -65,6 +69,7 @@ import ExerciseLibraryView from './views/ExerciseLibraryView'
 import QuestionsView from './views/QuestionsView'
 import ProgramsView from './views/ProgramsView'
 import FoodsView from './views/FoodsView'
+import MealsView from './views/MealsView'
 import PrivacyPolicyView from './views/PrivacyPolicyView'
 import DeleteAccountView from './views/DeleteAccountView'
 import Sidebar from './components/layout/Sidebar'
@@ -76,6 +81,7 @@ import ProgramModal from './components/modals/ProgramModal'
 import ProgramScheduleModal from './components/modals/ProgramScheduleModal'
 import FoodModal from './components/modals/FoodModal'
 import FoodCategoryModal from './components/modals/FoodCategoryModal'
+import MealModal from './components/modals/MealModal'
 // import { createLogger } from 'vite'
 
 const getInitialEmail = () => safeGetFromStorage(AUTH_EMAIL_KEY) ?? ''
@@ -135,7 +141,20 @@ const getDefaultFoodForm = () => ({
   isActive: true,
 })
 
+const getDefaultMealForm = () => ({
+  id: '',
+  key: '',
+  name: '',
+  iconUrl: '',
+  iconFile: null,
+  minRatio: '0.2',
+  maxRatio: '0.3',
+  sortOrder: '0',
+  isActive: true,
+})
+
 const FOOD_IMAGE_FOLDER = 'food-images'
+const MEAL_ICON_FOLDER = 'meal-icons'
 
 const getDefaultCategoryForm = () => ({
   id: '',
@@ -456,6 +475,13 @@ function App() {
   const [isCategoryModalOpen, setCategoryModalOpen] = useState(false)
   const [categoryForm, setCategoryForm] = useState(getDefaultCategoryForm)
   const [categoryPending, setCategoryPending] = useState(false)
+  const [mealsData, setMealsData] = useState([])
+  const [mealsLoading, setMealsLoading] = useState(false)
+  const [mealsError, setMealsError] = useState('')
+  const [mealModalMode, setMealModalMode] = useState('create')
+  const [isMealModalOpen, setMealModalOpen] = useState(false)
+  const [mealForm, setMealForm] = useState(getDefaultMealForm)
+  const [mealPending, setMealPending] = useState(false)
 
   const isLoggedIn = useMemo(() => Boolean(token), [token])
   const trimmedEmail = email.trim().toLowerCase()
@@ -494,6 +520,11 @@ function App() {
           description: 'Configure the 28-day free program and the paid 60-day premium journey.',
         }
       case 'foods':
+        return {
+          title: '',
+          description: '',
+        }
+      case 'meals':
         return {
           title: '',
           description: '',
@@ -861,6 +892,22 @@ function App() {
     },
     [foodFilters, handleApiError, token],
   )
+
+  const loadMeals = useCallback(async () => {
+    if (!token) return
+    setMealsLoading(true)
+    setMealsError('')
+    try {
+      const response = await fetchMealsAdmin({ includeInactive: true }, token)
+      const payload = response?.data ?? response ?? {}
+      setMealsData(payload.meals ?? [])
+    } catch (error) {
+      setMealsError(error?.message ?? 'Unable to load meals.')
+      handleApiError(error)
+    } finally {
+      setMealsLoading(false)
+    }
+  }, [handleApiError, token])
 
   const openCreateProgramModal = useCallback(() => {
     setProgramModalMode('create')
@@ -1326,6 +1373,106 @@ function App() {
     [handleApiError, loadFoods, token],
   )
 
+  const openCreateMealModal = useCallback(() => {
+    setMealModalMode('create')
+    setMealForm(getDefaultMealForm())
+    setMealModalOpen(true)
+  }, [])
+
+  const openEditMealModal = useCallback((meal) => {
+    if (!meal) return
+    setMealModalMode('edit')
+    setMealForm({
+      id: meal.id,
+      key: meal.key ?? '',
+      name: meal.name ?? '',
+      iconUrl: meal.icon_url ?? '',
+      iconFile: null,
+      minRatio: meal.min_ratio != null ? String(meal.min_ratio) : '0',
+      maxRatio: meal.max_ratio != null ? String(meal.max_ratio) : '0',
+      sortOrder: meal.sort_order != null ? String(meal.sort_order) : '0',
+      isActive: Boolean(meal.is_active ?? true),
+    })
+    setMealModalOpen(true)
+  }, [])
+
+  const closeMealModal = useCallback(() => {
+    setMealModalOpen(false)
+  }, [])
+
+  const handleMealModalSubmit = useCallback(async () => {
+    if (!token) return
+    if (!mealForm.name.trim() || !mealForm.key.trim()) {
+      setStatus({ type: 'error', text: 'Meal key and name are required.' })
+      return
+    }
+    const toNumber = (value) => {
+      if (value === '' || value == null) return 0
+      const parsed = parseFloat(value)
+      return Number.isNaN(parsed) ? 0 : parsed
+    }
+    setMealPending('saving')
+    try {
+      let iconUrl = mealForm.iconUrl?.trim() || ''
+      if (mealForm.iconFile) {
+        setMealPending('uploading')
+        await ensureSpacesFolders([MEAL_ICON_FOLDER])
+        const { url } = await uploadFileToSpaces(mealForm.iconFile, {
+          folder: MEAL_ICON_FOLDER,
+        })
+        iconUrl = url
+      }
+      const payload = {
+        key: mealForm.key.trim(),
+        name: mealForm.name.trim(),
+        icon_url: iconUrl || null,
+        min_ratio: toNumber(mealForm.minRatio),
+        max_ratio: toNumber(mealForm.maxRatio),
+        sort_order: Number(mealForm.sortOrder) || 0,
+        is_active: Boolean(mealForm.isActive),
+      }
+      if (mealModalMode === 'edit' && mealForm.id) {
+        const response = await updateMeal(mealForm.id, payload, token)
+        setStatus({ type: 'success', text: response?.message ?? 'Meal updated.' })
+      } else {
+        const response = await createMeal(payload, token)
+        setStatus({ type: 'success', text: response?.message ?? 'Meal created.' })
+      }
+      setMealModalOpen(false)
+      loadMeals()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setMealPending('')
+    }
+  }, [handleApiError, loadMeals, mealForm, mealModalMode, token])
+
+  const handleMealDelete = useCallback(
+    async (meal) => {
+      if (!token || !meal) return
+      const result = await Swal.fire({
+        title: `Delete ${meal.name ?? 'this meal'}?`,
+        text: 'This will permanently remove it from the database.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#FA99B5',
+        cancelButtonColor: '#94a3b8',
+        reverseButtons: true,
+      })
+      if (!result.isConfirmed) return
+      try {
+        await deleteMeal(meal.id, token)
+        setStatus({ type: 'success', text: 'Meal deleted.' })
+        loadMeals()
+      } catch (error) {
+        handleApiError(error)
+      }
+    },
+    [handleApiError, loadMeals, token],
+  )
+
   const openCreateCategoryModal = useCallback(() => {
     setCategoryModalMode('create')
     setCategoryForm(getDefaultCategoryForm())
@@ -1489,6 +1636,12 @@ useEffect(() => {
       loadFoods()
     }
   }, [activeView, isLoggedIn, loadFoods])
+
+  useEffect(() => {
+    if (isLoggedIn && activeView === 'meals') {
+      loadMeals()
+    }
+  }, [activeView, isLoggedIn, loadMeals])
 
   useEffect(() => {
     if (resendSeconds <= 0) return undefined
@@ -2243,6 +2396,16 @@ useEffect(() => {
                   onDeleteCategory={handleCategoryDelete}
                 />
               )}
+              {activeView === 'meals' && (
+                <MealsView
+                  meals={mealsData}
+                  loading={mealsLoading}
+                  error={mealsError}
+                  onAddMeal={openCreateMealModal}
+                  onEditMeal={openEditMealModal}
+                  onDeleteMeal={handleMealDelete}
+                />
+              )}
               {activeView === 'privacyPolicy' && <PrivacyPolicyView />}
               {activeView === 'deleteAccount' && <DeleteAccountView />}
             </main>
@@ -2316,6 +2479,15 @@ useEffect(() => {
         pendingAction={categoryPending === 'saving' ? 'saving' : ''}
         onClose={closeCategoryModal}
         onSubmit={handleCategoryModalSubmit}
+      />
+      <MealModal
+        open={isMealModalOpen}
+        mode={mealModalMode}
+        form={mealForm}
+        setForm={setMealForm}
+        pendingAction={mealPending}
+        onClose={closeMealModal}
+        onSubmit={handleMealModalSubmit}
       />
       <UserAnalyticsModal
         open={isUserAnalyticsOpen}

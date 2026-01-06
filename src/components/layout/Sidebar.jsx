@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { id: 'questions', label: 'Questions', icon: '/question.png' },
   { id: 'programs', label: 'Programs', icon: '/plan.png' },
   { id: 'foods', label: 'Foods', icon: '/food.png' },
+  { id: 'meals', label: 'Meals', icon: '/food.png' },
 ]
 
 

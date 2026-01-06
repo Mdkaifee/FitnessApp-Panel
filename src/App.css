@@ -3124,8 +3124,40 @@ button.primary.slim {
   margin-top: 24px;
 }
 
+.modal-field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
 .modal-actions .theme-button {
   box-shadow: none;
+}
+
+.meal-icon-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.meal-icon-preview__image {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.meal-icon-preview__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .modal-section {
