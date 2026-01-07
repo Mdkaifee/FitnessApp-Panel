@@ -18,6 +18,7 @@ import {
   updateQuestion,
   deleteQuestion,
   updateUserStatus,
+  updateUserFlags,
   fetchUserAnalytics,
   fetchDashboardMetrics,
   fetchPrograms,
@@ -509,6 +510,7 @@ function App() {
   const [usersPage, setUsersPage] = useState(1)
   const [usersHasNext, setUsersHasNext] = useState(false)
   const [userStatusPending, setUserStatusPending] = useState('')
+  const [userFlagsPending, setUserFlagsPending] = useState({})
   const [selectedUser, setSelectedUser] = useState(null)
   const [userAnalytics, setUserAnalytics] = useState(null)
   const [userAnalyticsLoading, setUserAnalyticsLoading] = useState(false)
@@ -2403,6 +2405,36 @@ useEffect(() => {
     }
   }
 
+  const handleUserFlagChange = async (userId, updates) => {
+    if (!userId || !token || !updates) return
+    setUserFlagsPending((prev) => ({ ...prev, [userId]: true }))
+    try {
+      const response = await updateUserFlags(userId, updates, token)
+      const updatedUser = response?.data ?? null
+      if (updatedUser) {
+        setUsersData((prev) => {
+          if (!prev) return prev
+          const nextUsers = (prev.users ?? []).map((user) =>
+            user.id === updatedUser.id ? { ...user, ...updatedUser } : user,
+          )
+          return { ...prev, users: nextUsers }
+        })
+      }
+      setStatus({
+        type: 'success',
+        text: response?.message ?? 'User updated successfully.',
+      })
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setUserFlagsPending((prev) => {
+        const next = { ...prev }
+        delete next[userId]
+        return next
+      })
+    }
+  }
+
   const handleBackToLoginStep = () => {
     navigateAuthStep('login')
     setOtpDigits(getEmptyOtpDigits())
@@ -2477,6 +2509,8 @@ useEffect(() => {
                   page={usersPage}
                   onToggleStatus={handleUserStatusChange}
                   statusPending={userStatusPending}
+                  onToggleFlag={handleUserFlagChange}
+                  flagsPending={userFlagsPending}
                   onViewAnalytics={handleUserAnalyticsOpen}
                   onUserNameClick={handleUserNameClick}
                   onPrevPage={handleUsersPrevPage}

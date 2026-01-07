@@ -183,6 +183,13 @@ export const updateUserStatus = (userId, isActive, token) =>
     token,
   })
 
+export const updateUserFlags = (userId, payload, token) =>
+  apiRequest(`/users/${userId}/flags`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
 export const fetchUserAnalytics = (userId, days = 7, token) => {
   const params = new URLSearchParams()
   params.append('user_id', String(userId))

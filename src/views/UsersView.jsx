@@ -8,7 +8,9 @@ function UsersView({
   hasNext,
   page,
   onToggleStatus,
+  onToggleFlag,
   statusPending,
+  flagsPending,
   onViewAnalytics,
   onUserNameClick,
   onPrevPage,
@@ -37,6 +39,9 @@ function UsersView({
     { label: 'Phone', align: 'left' },
     { label: 'DOB', align: 'left' },
     { label: 'Gender', align: 'left' },
+    { label: 'Pilates Board', align: 'center' },
+    { label: 'Ankle/Wrist', align: 'center' },
+    // { label: 'First Purchase', align: 'center' },
     { label: 'Status', align: 'center' },
     { label: 'Photo', align: 'center' },
     { label: 'Actions', align: 'right' },
@@ -72,6 +77,7 @@ function UsersView({
                 const fullName =
                   [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || '—'
                 const isActionDisabled = statusPending === String(user.id) || isLoading
+                const isFlagDisabled = Boolean(flagsPending?.[user.id]) || isLoading
                 return (
                   <tr key={user.id}>
                     <td className="align-left">{index + 1}</td>
@@ -104,6 +110,48 @@ function UsersView({
                     <td className="align-left">{user.phone ?? '—'}</td>
                     <td className="align-left">{user.dob ?? '—'}</td>
                     <td className="align-left">{user.gender ?? '—'}</td>
+                    <td className="align-center">
+                      <input
+                        type="checkbox"
+                        className="user-flag-toggle"
+                        checked={Boolean(user.has_pilates_board)}
+                        disabled={isFlagDisabled}
+                        onChange={() =>
+                          onToggleFlag?.(user.id, {
+                            has_pilates_board: !user.has_pilates_board,
+                          })
+                        }
+                        aria-label="Pilates board purchased"
+                      />
+                    </td>
+                    <td className="align-center">
+                      <input
+                        type="checkbox"
+                        className="user-flag-toggle"
+                        checked={Boolean(user.has_ankle_wrist_weights)}
+                        disabled={isFlagDisabled}
+                        onChange={() =>
+                          onToggleFlag?.(user.id, {
+                            has_ankle_wrist_weights: !user.has_ankle_wrist_weights,
+                          })
+                        }
+                        aria-label="Ankle wrist weights purchased"
+                      />
+                    </td>
+                    {/* <td className="align-center">
+                      <input
+                        type="checkbox"
+                        className="user-flag-toggle"
+                        checked={Boolean(user.is_first_purchase)}
+                        disabled={isFlagDisabled}
+                        onChange={() =>
+                          onToggleFlag?.(user.id, {
+                            is_first_purchase: !user.is_first_purchase,
+                          })
+                        }
+                        aria-label="First purchase"
+                      />
+                    </td> */}
                     <td className="align-center">
                       <span className={`pill ${user.is_active ? 'success' : 'danger'}`}>
                       <span className="status-dot"></span>
