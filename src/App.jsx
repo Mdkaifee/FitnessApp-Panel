@@ -122,6 +122,9 @@ const getDefaultProgramForm = () => ({
   durationDays: '28',
   accessLevel: 'free',
   priceUsd: '',
+  paidTerm: 'monthly',
+  originalPrice: '',
+  discountedPrice: '',
   isActive: true,
 })
 
@@ -233,6 +236,53 @@ const buildPlanSlug = (durationDays, accessLevel) => {
   return `${durationLabel}-${access}-plan`.toLowerCase().replace(/[^a-z0-9-]/g, '')
 }
 
+const resolvePaidTerm = (value) => {
+  const term = sanitizeString(value).trim().toLowerCase()
+  if (term === 'weekly' || term === 'monthly' || term === 'yearly') return term
+  return 'monthly'
+}
+
+const paidTermToDays = (term) => {
+  if (term === 'weekly') return 7
+  if (term === 'yearly') return 365
+  return 30
+}
+
+const paidTitleForTerm = (term) => {
+  if (term === 'weekly') return 'Paid Plan - Weekly'
+  if (term === 'yearly') return 'Paid Plan - Yearly'
+  return 'Paid Plan - Monthly'
+}
+
+const resolvePaidTermFromProgram = (program) => {
+  if (program?.weekly_price_usd || program?.weekly_original_price_usd) return 'weekly'
+  if (program?.monthly_price_usd || program?.monthly_original_price_usd) return 'monthly'
+  if (program?.yearly_price_usd || program?.yearly_original_price_usd) return 'yearly'
+  const duration = parseIntValue(program?.duration_days ?? program?.durationDays ?? 0)
+  if (duration >= 365) return 'yearly'
+  if (duration >= 28) return 'monthly'
+  return 'weekly'
+}
+
+const resolvePaidPricesFromProgram = (program, term) => {
+  if (term === 'weekly') {
+    return {
+      original: program?.weekly_original_price_usd ?? program?.weeklyOriginalPriceUsd ?? null,
+      discounted: program?.weekly_price_usd ?? program?.weeklyPriceUsd ?? null,
+    }
+  }
+  if (term === 'yearly') {
+    return {
+      original: program?.yearly_original_price_usd ?? program?.yearlyOriginalPriceUsd ?? null,
+      discounted: program?.yearly_price_usd ?? program?.yearlyPriceUsd ?? null,
+    }
+  }
+  return {
+    original: program?.monthly_original_price_usd ?? program?.monthlyOriginalPriceUsd ?? null,
+    discounted: program?.monthly_price_usd ?? program?.monthlyPriceUsd ?? null,
+  }
+}
+
 const getPlanMediaFolder = (program) => {
   const duration = parseIntValue(program?.duration_days ?? program?.durationDays ?? 0)
   if (duration === 28) return '28 days plan videos'
@@ -244,17 +294,37 @@ const getPlanMediaFolder = (program) => {
 }
 
 const buildProgramPayload = (form) => {
-  const durationDays = parseIntValue(form.durationDays)
-  const normalizedTitle = typeof form.title === 'string' ? form.title.trim() : ''
   const accessValue = typeof form.accessLevel === 'string' ? form.accessLevel.trim().toLowerCase() : 'free'
   const accessLevel = accessValue === 'paid' ? 'paid' : 'free'
-  const rawPrice = parseFloatValue(form.priceUsd)
-  const priceUsd = accessLevel === 'paid' ? rawPrice : null
-  const slugFromTitle = normalizeProgramSlug(undefined, normalizedTitle)
+  const paidTerm = resolvePaidTerm(form.paidTerm)
+  const durationDays =
+    accessLevel === 'paid' ? paidTermToDays(paidTerm) : parseIntValue(form.durationDays)
+  const normalizedTitle = typeof form.title === 'string' ? form.title.trim() : ''
+  const originalPrice = accessLevel === 'paid' ? parseFloatValue(form.originalPrice) : null
+  const discountedPrice =
+    accessLevel === 'paid' ? parseFloatValue(form.discountedPrice) : null
+  const priceUsd = accessLevel === 'paid' ? discountedPrice : null
+  const weeklyPriceUsd = accessLevel === 'paid' && paidTerm === 'weekly' ? discountedPrice : null
+  const weeklyOriginalPriceUsd =
+    accessLevel === 'paid' && paidTerm === 'weekly' ? originalPrice : null
+  const monthlyPriceUsd =
+    accessLevel === 'paid' && paidTerm === 'monthly' ? discountedPrice : null
+  const monthlyOriginalPriceUsd =
+    accessLevel === 'paid' && paidTerm === 'monthly' ? originalPrice : null
+  const yearlyPriceUsd = accessLevel === 'paid' && paidTerm === 'yearly' ? discountedPrice : null
+  const yearlyOriginalPriceUsd =
+    accessLevel === 'paid' && paidTerm === 'yearly' ? originalPrice : null
+  const slugFromTitle = normalizeProgramSlug(
+    undefined,
+    accessLevel === 'paid' ? paidTitleForTerm(paidTerm) : normalizedTitle,
+  )
   const slug = slugFromTitle || buildPlanSlug(durationDays, accessLevel)
   return {
     slug,
-    title: normalizedTitle || (durationDays > 0 ? `${durationDays}-Day Plan` : 'Program'),
+    title:
+      accessLevel === 'paid'
+        ? paidTitleForTerm(paidTerm)
+        : normalizedTitle || (durationDays > 0 ? `${durationDays}-Day Plan` : 'Program'),
     subtitle: null,
     description: null,
     duration_days: durationDays,
@@ -263,6 +333,12 @@ const buildProgramPayload = (form) => {
     level: null,
     access_level: accessLevel,
     price_usd: priceUsd,
+    weekly_price_usd: weeklyPriceUsd,
+    weekly_original_price_usd: weeklyOriginalPriceUsd,
+    monthly_price_usd: monthlyPriceUsd,
+    monthly_original_price_usd: monthlyOriginalPriceUsd,
+    yearly_price_usd: yearlyPriceUsd,
+    yearly_original_price_usd: yearlyOriginalPriceUsd,
     cta_label: null,
     is_active: Boolean(form.isActive),
   }
@@ -292,6 +368,60 @@ const buildProgramPayloadFromRecord = (program, overrides = {}) => {
       program?.priceUsd,
   )
   const priceUsd = accessLevel === 'paid' ? rawPrice : null
+  const weeklyPriceUsd =
+    accessLevel === 'paid'
+      ? parseFloatValue(
+          overrides.weeklyPriceUsd ??
+            overrides.weekly_price_usd ??
+            program?.weekly_price_usd ??
+            program?.weeklyPriceUsd,
+        )
+      : null
+  const weeklyOriginalPriceUsd =
+    accessLevel === 'paid'
+      ? parseFloatValue(
+          overrides.weeklyOriginalPriceUsd ??
+            overrides.weekly_original_price_usd ??
+            program?.weekly_original_price_usd ??
+            program?.weeklyOriginalPriceUsd,
+        )
+      : null
+  const monthlyPriceUsd =
+    accessLevel === 'paid'
+      ? parseFloatValue(
+          overrides.monthlyPriceUsd ??
+            overrides.monthly_price_usd ??
+            program?.monthly_price_usd ??
+            program?.monthlyPriceUsd,
+        )
+      : null
+  const monthlyOriginalPriceUsd =
+    accessLevel === 'paid'
+      ? parseFloatValue(
+          overrides.monthlyOriginalPriceUsd ??
+            overrides.monthly_original_price_usd ??
+            program?.monthly_original_price_usd ??
+            program?.monthlyOriginalPriceUsd,
+        )
+      : null
+  const yearlyPriceUsd =
+    accessLevel === 'paid'
+      ? parseFloatValue(
+          overrides.yearlyPriceUsd ??
+            overrides.yearly_price_usd ??
+            program?.yearly_price_usd ??
+            program?.yearlyPriceUsd,
+        )
+      : null
+  const yearlyOriginalPriceUsd =
+    accessLevel === 'paid'
+      ? parseFloatValue(
+          overrides.yearlyOriginalPriceUsd ??
+            overrides.yearly_original_price_usd ??
+            program?.yearly_original_price_usd ??
+            program?.yearlyOriginalPriceUsd,
+        )
+      : null
   const nextActive =
     typeof overrides.isActive === 'boolean'
       ? overrides.isActive
@@ -314,6 +444,12 @@ const buildProgramPayloadFromRecord = (program, overrides = {}) => {
     level: null,
     access_level: accessLevel,
     price_usd: priceUsd,
+    weekly_price_usd: weeklyPriceUsd,
+    weekly_original_price_usd: weeklyOriginalPriceUsd,
+    monthly_price_usd: monthlyPriceUsd,
+    monthly_original_price_usd: monthlyOriginalPriceUsd,
+    yearly_price_usd: yearlyPriceUsd,
+    yearly_original_price_usd: yearlyOriginalPriceUsd,
     cta_label: null,
     is_active: nextActive,
   }
@@ -918,17 +1054,31 @@ function App() {
   const openEditProgramModal = useCallback((program) => {
     if (!program) return
     setProgramModalMode('edit')
+    const accessLevel =
+      (program.access_level ?? program.accessLevel ?? 'free') === 'paid' ? 'paid' : 'free'
+    const paidTerm = accessLevel === 'paid' ? resolvePaidTermFromProgram(program) : 'monthly'
+    const paidPrices =
+      accessLevel === 'paid' ? resolvePaidPricesFromProgram(program, paidTerm) : { original: null, discounted: null }
     setProgramForm({
       id: program.id ?? '',
       title: program.title ?? '',
       durationDays: String(program.duration_days ?? program.durationDays ?? ''),
-      accessLevel: (program.access_level ?? program.accessLevel ?? 'free') === 'paid' ? 'paid' : 'free',
+      accessLevel,
       priceUsd:
         program.price_usd != null
           ? String(program.price_usd)
           : program.priceUsd != null
             ? String(program.priceUsd)
             : '',
+      paidTerm,
+      originalPrice:
+        paidPrices.original != null
+          ? String(paidPrices.original)
+          : '',
+      discountedPrice:
+        paidPrices.discounted != null
+          ? String(paidPrices.discounted)
+          : '',
       isActive:
         typeof program.is_active === 'boolean' ? program.is_active : program.isActive ?? true,
     })
@@ -1151,31 +1301,39 @@ function App() {
 
   const handleProgramModalSubmit = useCallback(async () => {
     if (!token) return
-    const trimmedName = (programForm.title ?? '').trim()
-    if (!trimmedName) {
-      setStatus({ type: 'error', text: 'Plan name is required.' })
-      return
-    }
-    const parsedDays = parseIntValue(programForm.durationDays)
-    if (parsedDays <= 0) {
-      setStatus({ type: 'error', text: 'Number of days must be greater than 0.' })
-      return
-    }
     const accessInput = (programForm.accessLevel ?? '').trim().toLowerCase()
     if (accessInput !== 'free' && accessInput !== 'paid') {
       setStatus({ type: 'error', text: 'Access type must be either "free" or "paid".' })
       return
     }
-    const priceValue = parseFloatValue(programForm.priceUsd)
-    if (accessInput === 'paid' && (priceValue == null || priceValue <= 0)) {
-      setStatus({ type: 'error', text: 'Enter a price in USD for paid plans.' })
+    const trimmedName = (programForm.title ?? '').trim()
+    if (accessInput === 'free' && !trimmedName) {
+      setStatus({ type: 'error', text: 'Plan name is required.' })
+      return
+    }
+    const parsedDays = parseIntValue(programForm.durationDays)
+    if (accessInput === 'free' && parsedDays <= 0) {
+      setStatus({ type: 'error', text: 'Number of days must be greater than 0.' })
+      return
+    }
+    const paidTerm = resolvePaidTerm(programForm.paidTerm)
+    const originalPrice = parseFloatValue(programForm.originalPrice)
+    const discountedPrice = parseFloatValue(programForm.discountedPrice)
+    if (accessInput === 'paid' && (!originalPrice || !discountedPrice)) {
+      setStatus({
+        type: 'error',
+        text: 'Enter original and discounted prices for paid plans.',
+      })
       return
     }
     const payload = buildProgramPayload({
       ...programForm,
-      title: trimmedName,
-      durationDays: String(parsedDays),
+      title: accessInput === 'paid' ? paidTitleForTerm(paidTerm) : trimmedName,
+      durationDays: accessInput === 'paid' ? String(paidTermToDays(paidTerm)) : String(parsedDays),
       accessLevel: accessInput,
+      paidTerm,
+      originalPrice: accessInput === 'paid' ? String(originalPrice ?? '') : '',
+      discountedPrice: accessInput === 'paid' ? String(discountedPrice ?? '') : '',
     })
     const mode = programModalMode
     const identifier = mode === 'edit' ? programForm.id || programForm.slug : undefined
