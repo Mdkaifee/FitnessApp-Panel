@@ -2407,9 +2407,21 @@ useEffect(() => {
 
   const handleUserFlagChange = async (userId, updates) => {
     if (!userId || !token || !updates) return
+    const user = usersData?.users?.find((entry) => entry.id === userId)
+    if (updates.has_ankle_wrist_weights && !user?.has_pilates_board) {
+      setStatus({
+        type: 'error',
+        text: 'Enable Pilates Board before setting Ankle/Wrist weights.',
+      })
+      return
+    }
+    const nextUpdates =
+      updates.has_pilates_board === false
+        ? { ...updates, has_ankle_wrist_weights: false }
+        : updates
     setUserFlagsPending((prev) => ({ ...prev, [userId]: true }))
     try {
-      const response = await updateUserFlags(userId, updates, token)
+      const response = await updateUserFlags(userId, nextUpdates, token)
       const updatedUser = response?.data ?? null
       if (updatedUser) {
         setUsersData((prev) => {

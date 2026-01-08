@@ -41,7 +41,6 @@ function UsersView({
     { label: 'Gender', align: 'left' },
     { label: 'Pilates Board', align: 'center' },
     { label: 'Ankle/Wrist', align: 'center' },
-    // { label: 'First Purchase', align: 'center' },
     { label: 'Status', align: 'center' },
     { label: 'Photo', align: 'center' },
     { label: 'Actions', align: 'right' },
@@ -129,7 +128,7 @@ function UsersView({
                         type="checkbox"
                         className="user-flag-toggle"
                         checked={Boolean(user.has_ankle_wrist_weights)}
-                        disabled={isFlagDisabled}
+                        disabled={isFlagDisabled || !user.has_pilates_board}
                         onChange={() =>
                           onToggleFlag?.(user.id, {
                             has_ankle_wrist_weights: !user.has_ankle_wrist_weights,
@@ -138,20 +137,6 @@ function UsersView({
                         aria-label="Ankle wrist weights purchased"
                       />
                     </td>
-                    {/* <td className="align-center">
-                      <input
-                        type="checkbox"
-                        className="user-flag-toggle"
-                        checked={Boolean(user.is_first_purchase)}
-                        disabled={isFlagDisabled}
-                        onChange={() =>
-                          onToggleFlag?.(user.id, {
-                            is_first_purchase: !user.is_first_purchase,
-                          })
-                        }
-                        aria-label="First purchase"
-                      />
-                    </td> */}
                     <td className="align-center">
                       <span className={`pill ${user.is_active ? 'success' : 'danger'}`}>
                       <span className="status-dot"></span>
