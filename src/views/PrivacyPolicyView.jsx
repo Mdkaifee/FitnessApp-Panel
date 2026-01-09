@@ -4,6 +4,7 @@ import { uploadFileToSpaces, ensureSpacesFolders } from '../services/spaces'
 
 const TERMS_FOLDER = 'legal/terms'
 const PRIVACY_FOLDER = 'legal/privacy'
+const SUBSCRIPTION_FOLDER = 'legal/subscription'
 const LEGAL_FILE_TYPES = '.pdf,.doc,.docx,application/pdf'
 
 const getFileName = (url = '') => {
@@ -21,15 +22,17 @@ const getFileName = (url = '') => {
 function PrivacyPolicyView({ token }) {
   const [termsUrl, setTermsUrl] = useState('')
   const [privacyUrl, setPrivacyUrl] = useState('')
+  const [subscriptionUrl, setSubscriptionUrl] = useState('')
   const [termsFile, setTermsFile] = useState(null)
   const [privacyFile, setPrivacyFile] = useState(null)
+  const [subscriptionFile, setSubscriptionFile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
   const canEdit = Boolean(token)
-  const hasUploads = Boolean(termsFile || privacyFile)
+  const hasUploads = Boolean(termsFile || privacyFile || subscriptionFile)
 
   useEffect(() => {
     let isActive = true
@@ -42,6 +45,7 @@ function PrivacyPolicyView({ token }) {
         if (!isActive) return
         setTermsUrl(data.terms_url ?? '')
         setPrivacyUrl(data.privacy_url ?? '')
+        setSubscriptionUrl(data.subscription_url ?? '')
       } catch (err) {
         if (!isActive) return
         setError(err?.message ?? 'Unable to load legal links.')
@@ -60,7 +64,11 @@ function PrivacyPolicyView({ token }) {
     let isActive = true
     const ensureFolders = async () => {
       try {
-        await ensureSpacesFolders([TERMS_FOLDER, PRIVACY_FOLDER])
+        await ensureSpacesFolders([
+          TERMS_FOLDER,
+          PRIVACY_FOLDER,
+          SUBSCRIPTION_FOLDER,
+        ])
       } catch (err) {
         if (!isActive) return
         setError(
@@ -90,6 +98,7 @@ function PrivacyPolicyView({ token }) {
     try {
       let nextTermsUrl = termsUrl.trim()
       let nextPrivacyUrl = privacyUrl.trim()
+      let nextSubscriptionUrl = subscriptionUrl.trim()
 
       const payload = {}
       if (termsFile) {
@@ -108,12 +117,22 @@ function PrivacyPolicyView({ token }) {
         payload.privacy_url = nextPrivacyUrl
       }
 
+      if (subscriptionFile) {
+        const { url } = await uploadFileToSpaces(subscriptionFile, {
+          folder: SUBSCRIPTION_FOLDER,
+        })
+        nextSubscriptionUrl = url
+        payload.subscription_url = nextSubscriptionUrl
+      }
+
       const response = await updateLegalLinks(payload, token)
       const data = response?.data ?? {}
       setTermsUrl(data.terms_url ?? nextTermsUrl)
       setPrivacyUrl(data.privacy_url ?? nextPrivacyUrl)
+      setSubscriptionUrl(data.subscription_url ?? nextSubscriptionUrl)
       setTermsFile(null)
       setPrivacyFile(null)
+      setSubscriptionFile(null)
       setNotice('Legal links updated.')
     } catch (err) {
       setError(err?.message ?? 'Unable to update legal links.')
@@ -207,6 +226,61 @@ function PrivacyPolicyView({ token }) {
                 disabled={!canEdit || saving}
               />
               {privacyFile ? `Selected: ${privacyFile.name}` : 'Upload Privacy'}
+            </label>
+          </article>
+
+          <article className="legal-card">
+            <div className="legal-card__header">
+              <h3>Subscription Terms</h3>
+              {subscriptionUrl ? (
+                <a
+                  className="legal-link"
+                  href={subscriptionUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View file
+                </a>
+              ) : (
+                <span className="pill neutral">No file</span>
+              )}
+            </div>
+            <div className="legal-preview">
+              <span className="legal-preview__label">Current document</span>
+              {subscriptionUrl ? (
+                <a
+                  className="legal-preview__link"
+                  href={subscriptionUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {getFileName(subscriptionUrl) || 'View document'}
+                </a>
+              ) : (
+                <span className="legal-preview__empty">
+                  No document uploaded yet.
+                </span>
+              )}
+              {subscriptionFile ? (
+                <span className="legal-preview__pending">
+                  Selected: {subscriptionFile.name}
+                </span>
+              ) : null}
+            </div>
+            <label className="legal-upload">
+              <input
+                type="file"
+                accept={LEGAL_FILE_TYPES}
+                onChange={(event) => {
+                  const [file] = event.target.files ?? []
+                  if (file) setSubscriptionFile(file)
+                  event.target.value = ''
+                }}
+                disabled={!canEdit || saving}
+              />
+              {subscriptionFile
+                ? `Selected: ${subscriptionFile.name}`
+                : 'Upload Subscription Terms'}
             </label>
           </article>
         </div>

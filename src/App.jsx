@@ -670,7 +670,8 @@ function App() {
       case 'privacyPolicy':
         return {
           title: 'Privacy Policy',
-          description: 'Upload Terms & Privacy files or paste URLs used in the mobile app.',
+          description:
+            'Upload Terms, Privacy, and Subscription files or paste URLs used in the mobile app.',
         }
       case 'deleteAccount':
         return {
