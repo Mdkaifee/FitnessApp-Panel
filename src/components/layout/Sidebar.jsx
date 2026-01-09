@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { id: 'programs', label: 'Programs', icon: '/plan.png' },
   { id: 'foods', label: 'Foods', icon: '/food.png' },
   { id: 'meals', label: 'Meals', icon: '/food.png' },
+  { id: 'privacyPolicy', label: 'Legal Documents', icon: '/legal.png' },
 ]
 
 

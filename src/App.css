@@ -918,6 +918,131 @@ button.secondary {
   font-weight: 600;
 }
 
+.legal-panel .panel-header p {
+  max-width: 520px;
+}
+
+.legal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.legal-card {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.04);
+}
+
+.legal-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.legal-card__header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.legal-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: #f8fafc;
+}
+
+.legal-preview__label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.legal-preview__link {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.legal-preview__link:hover {
+  text-decoration: underline;
+}
+
+.legal-preview__empty {
+  color: var(--color-muted);
+}
+
+.legal-preview__pending {
+  color: #FA99B5;
+  font-weight: 600;
+}
+
+.legal-link {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.legal-link:hover {
+  text-decoration: underline;
+}
+
+.legal-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.7);
+  background: #f8fafc;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legal-upload input {
+  display: none;
+}
+
+.legal-actions {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.legal-save-button {
+  background: #FA99B5;
+  box-shadow: 0 8px 18px rgba(250, 153, 181, 0.3);
+}
+
+.legal-save-button:disabled {
+  background: #FA99B5;
+}
+
+.success-text {
+  color: #16a34a;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
 .placeholder-panel {
   min-height: 200px;
   display: flex;

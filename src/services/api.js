@@ -85,6 +85,18 @@ export const fetchProfile = (token) =>
     token,
   })
 
+export const fetchLegalLinks = () =>
+  apiRequest('/legal-links', {
+    method: 'GET',
+  })
+
+export const updateLegalLinks = (payload, token) =>
+  apiRequest('/legal-links/admin', {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
 export const fetchUsers = (token) =>
   apiRequest('/users', {
     token,

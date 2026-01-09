@@ -670,7 +670,7 @@ function App() {
       case 'privacyPolicy':
         return {
           title: 'Privacy Policy',
-          description: 'See how Fitness Cassie collects, stores, and protects member data.',
+          description: 'Upload Terms & Privacy files or paste URLs used in the mobile app.',
         }
       case 'deleteAccount':
         return {
@@ -2610,7 +2610,7 @@ useEffect(() => {
                   onDeleteMeal={handleMealDelete}
                 />
               )}
-              {activeView === 'privacyPolicy' && <PrivacyPolicyView />}
+              {activeView === 'privacyPolicy' && <PrivacyPolicyView token={token} />}
               {activeView === 'deleteAccount' && <DeleteAccountView />}
             </main>
           </div>
