@@ -90,12 +90,21 @@ export const fetchUsers = (token) =>
     token,
   })
 
-export const fetchVideosByCategory = (category, token, page = 1, pageSize = 20, { gender } = {}) => {
+export const fetchVideosByCategory = (
+  category,
+  token,
+  page = 1,
+  pageSize = 20,
+  { gender, excludePlanVideos = true } = {},
+) => {
   const params = new URLSearchParams()
   params.append('page', String(page))
   params.append('page_size', String(pageSize))
   if (gender && gender !== 'All') {
     params.append('gender', gender)
+  }
+  if (excludePlanVideos) {
+    params.append('exclude_plan_videos', 'true')
   }
   const query = params.toString()
   return apiRequest(`/videos/db/${encodeURIComponent(category)}?${query}`, {
