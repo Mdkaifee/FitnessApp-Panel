@@ -125,11 +125,6 @@ function PrivacyPolicyView({ token }) {
   return (
     <div className="panel legal-panel">
       <div className="panel-header">
-        <div>
-          <h2>Legal Documents</h2>
-          <p>Upload Terms &amp; Privacy files used in the mobile app.</p>
-        </div>
-        <span className="pill neutral">DigitalOcean Spaces</span>
       </div>
       {error ? <p className="error-text">{error}</p> : null}
       {notice ? <p className="success-text">{notice}</p> : null}
