@@ -178,6 +178,27 @@ const parseFloatValue = (value) => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+const getVideoDurationSeconds = (file) =>
+  new Promise((resolve) => {
+    if (!file) {
+      resolve(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => {
+      const duration = Number.isFinite(video.duration) ? Math.round(video.duration) : null
+      URL.revokeObjectURL(url)
+      resolve(duration)
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(null)
+    }
+    video.src = url
+  })
+
 const normalizeProgramSlug = (slug, fallbackTitle) => {
   const source = slug?.trim() || fallbackTitle?.trim() || ''
   if (!source) return ''
@@ -199,10 +220,23 @@ const buildScheduleDaysState = (program, detailResponse) => {
   const remoteDays = Array.isArray(detailResponse?.days) ? detailResponse.days : []
   const map = new Map()
   remoteDays.forEach((day) => {
+    const rawDuration = parseIntValue(day.duration_minutes ?? day.durationMinutes ?? 0)
+    const rawSeconds = parseIntValue(
+      day?.video?.duration_seconds ?? day?.video?.durationSeconds ?? 0,
+    )
+    const derivedMinutes = rawSeconds >= 60 ? Math.floor(rawSeconds / 60) : 0
+    const normalizedDuration =
+      rawDuration > 0
+        ? rawDuration
+        : derivedMinutes >= 1
+        ? derivedMinutes
+        : null
     map.set(day.day_number, {
       id: day.id,
       dayNumber: day.day_number,
       isRestDay: Boolean(day.is_rest_day),
+      durationMinutes: normalizedDuration,
+      durationSeconds: rawSeconds > 0 ? rawSeconds : null,
       videoId: day.video_id ?? null,
       videoUrl: day.video?.video_url ?? '',
       videoThumbnail: day.video?.thumbnail_url ?? '',
@@ -218,6 +252,8 @@ const buildScheduleDaysState = (program, detailResponse) => {
         id: null,
         dayNumber,
         isRestDay: false,
+        durationMinutes: null,
+        durationSeconds: null,
         videoId: null,
         videoUrl: '',
         videoThumbnail: '',
@@ -1135,6 +1171,7 @@ function App() {
               isRestDay,
               ...(isRestDay
                 ? {
+                    durationMinutes: null,
                     videoId: null,
                     videoUrl: '',
                     videoThumbnail: '',
@@ -1161,6 +1198,23 @@ function App() {
           : day,
       ),
     )
+    if (field === 'videoFile' && file) {
+      getVideoDurationSeconds(file).then((seconds) => {
+        if (!seconds) return
+        const minutes = Math.floor(seconds / 60)
+        setScheduleDays((prev) =>
+          prev.map((day) =>
+            day.dayNumber === dayNumber
+              ? {
+                  ...day,
+                  durationMinutes: minutes >= 1 ? minutes : null,
+                  durationSeconds: seconds,
+                }
+              : day,
+          ),
+        )
+      })
+    }
   }, [])
 
   const handleClearDayVideo = useCallback((dayNumber) => {
@@ -1182,6 +1236,7 @@ function App() {
     )
   }, [])
 
+
   const handleAutoRestDays = useCallback(() => {
     setScheduleError('')
     setScheduleDays((prev) =>
@@ -1197,6 +1252,7 @@ function App() {
         return {
           ...day,
           isRestDay: true,
+          durationMinutes: null,
           videoId: null,
           videoUrl: '',
           videoThumbnail: '',
@@ -1247,13 +1303,28 @@ function App() {
             day_number: day.dayNumber,
             is_rest_day: true,
             title: `Rest Day ${day.dayNumber}`,
+            duration_minutes: null,
           })
           continue
+        }
+        let durationMinutes = day.durationMinutes
+        let durationSeconds = day.durationSeconds
+        if (!durationMinutes && day.durationSeconds) {
+          const minutes = Math.floor(day.durationSeconds / 60)
+          durationMinutes = minutes >= 1 ? minutes : null
         }
         let videoId = day.videoId
         if (day.videoFile || day.thumbnailFile) {
           if (!day.videoFile || !day.thumbnailFile) {
             throw new Error(`Day ${day.dayNumber}: select both a video and thumbnail.`)
+          }
+          if (!durationMinutes) {
+            const seconds = await getVideoDurationSeconds(day.videoFile)
+            if (seconds) {
+              durationSeconds = seconds
+              const minutes = Math.floor(seconds / 60)
+              durationMinutes = minutes >= 1 ? minutes : null
+            }
           }
           const [videoUpload, thumbUpload] = await Promise.all([
             uploadFileToSpaces(day.videoFile, { folder: planFolder }),
@@ -1266,6 +1337,9 @@ function App() {
             description: `Workout for day ${day.dayNumber}`,
             video_url: videoUpload.url,
             thumbnail_url: thumbUpload.url,
+          }
+          if (durationSeconds) {
+            videoPayload.duration_seconds = durationSeconds
           }
           const uploadResponse = await uploadVideo(videoPayload, token)
           videoId =
@@ -1285,6 +1359,7 @@ function App() {
           is_rest_day: false,
           video_id: videoId,
           title: `${scheduleProgram.title || 'Program'} · Day ${day.dayNumber}`,
+          duration_minutes: durationMinutes ?? null,
         })
       }
       const response = await updateProgramSchedule(identifier, { days: preparedDays }, token)
@@ -2049,6 +2124,7 @@ useEffect(() => {
       try {
         const videoFolder = getVideoUploadFolder(videoForm.bodyPart)
         const thumbnailFolder = getThumbnailUploadFolder(videoForm.bodyPart)
+        const durationSeconds = await getVideoDurationSeconds(videoForm.videoFile)
         const [uploadedVideo, uploadedThumbnail] = await Promise.all([
           uploadFileToSpaces(videoForm.videoFile, { folder: videoFolder }),
           uploadFileToSpaces(videoForm.thumbnailFile, { folder: thumbnailFolder }),
@@ -2059,6 +2135,9 @@ useEffect(() => {
           title: trimmedTitle,
           video_url: uploadedVideo.url,
           thumbnail_url: uploadedThumbnail.url,
+        }
+        if (durationSeconds) {
+          payload.duration_seconds = durationSeconds
         }
         if (trimmedDescription) {
           payload.description = trimmedDescription
@@ -2100,6 +2179,10 @@ useEffect(() => {
       if (videoForm.videoFile) {
         const { url } = await uploadFileToSpaces(videoForm.videoFile, { folder: videoFolder })
         payload.video_url = url
+        const durationSeconds = await getVideoDurationSeconds(videoForm.videoFile)
+        if (durationSeconds) {
+          payload.duration_seconds = durationSeconds
+        }
       }
       if (videoForm.thumbnailFile) {
         const { url } = await uploadFileToSpaces(videoForm.thumbnailFile, { folder: thumbnailFolder })

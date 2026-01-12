@@ -13,6 +13,7 @@ function ProgramScheduleModal({
   onClearVideo,
   onAutoRest,
   onSave,
+  onUpdateDuration,
 }) {
   if (!open) return null
 
@@ -172,6 +173,21 @@ function ProgramScheduleModal({
                                 />
                               </div>
                             </label>
+                          </div>
+
+                          <div className="upload-field plan-day-card__duration">
+                            <span>Duration</span>
+                            <input
+                              type="text"
+                              readOnly
+                              value={
+                                day.durationSeconds
+                                  ? day.durationSeconds < 60
+                                    ? `${day.durationSeconds} sec`
+                                    : `${Math.floor(day.durationSeconds / 60)} min`
+                                  : '—'
+                              }
+                            />
                           </div>
 
                           <div className="plan-day-card__status-row">
