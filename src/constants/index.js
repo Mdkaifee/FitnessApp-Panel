@@ -10,6 +10,7 @@ export const WORKSPACE_VIEWS = new Set([
   'programs',
   'foods',
   'meals',
+  'products',
   'privacyPolicy',
   'deleteAccount',
 ])
@@ -25,6 +26,7 @@ export const WORKSPACE_VIEW_ROUTES = {
   programs: '/programs',
   foods: '/foods',
   meals: '/meals',
+  products: '/products',
   privacyPolicy: '/privacy-policy',
   deleteAccount: '/delete-account',
 }

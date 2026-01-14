@@ -319,6 +319,17 @@ export const deleteFood = (foodId, token) =>
     token,
   })
 
+export const searchUsdaFoods = (query, token, limit) => {
+  const params = new URLSearchParams({ q: query })
+  if (limit) {
+    params.append('limit', String(limit))
+  }
+  return apiRequest(`/api/usda/search?${params.toString()}`, { token })
+}
+
+export const fetchUsdaFood = (fdcId, token) =>
+  apiRequest(`/api/usda/food/${fdcId}`, { token })
+
 export const fetchMealsAdmin = ({ includeInactive = true } = {}, token) => {
   const params = new URLSearchParams()
   if (includeInactive) {
@@ -344,6 +355,35 @@ export const updateMeal = (mealId, payload, token) =>
 
 export const deleteMeal = (mealId, token) =>
   apiRequest(`/nutrition/admin/meals/${mealId}`, {
+    method: 'DELETE',
+    token,
+  })
+
+export const fetchProductsAdmin = ({ includeInactive = true } = {}, token) => {
+  const params = new URLSearchParams()
+  if (includeInactive) {
+    params.append('include_inactive', 'true')
+  }
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return apiRequest(`/products/admin${query}`, { token })
+}
+
+export const createProduct = (payload, token) =>
+  apiRequest('/products/admin', {
+    method: 'POST',
+    body: payload,
+    token,
+  })
+
+export const updateProduct = (productId, payload, token) =>
+  apiRequest(`/products/admin/${productId}`, {
+    method: 'PUT',
+    body: payload,
+    token,
+  })
+
+export const deleteProduct = (productId, token) =>
+  apiRequest(`/products/admin/${productId}`, {
     method: 'DELETE',
     token,
   })

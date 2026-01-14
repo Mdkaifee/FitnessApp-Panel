@@ -22,6 +22,13 @@ function FoodsView({
   const handleCategoryChange = (event) => {
     onFiltersChange?.({ ...filters, categoryId: event.target.value })
   }
+  const formatServingLabel = (food) => {
+    const unit = food.serving_unit?.trim()
+    if (!unit) return null
+    if (/^[0-9]/.test(unit)) return unit
+    if (food.serving_quantity != null) return `${food.serving_quantity} ${unit}`
+    return unit
+  }
 
   return (
     <div className="foods-view">
@@ -95,10 +102,8 @@ function FoodsView({
                     <div className="food-name-cell">
                       <div>
                         <div className="table-primary-text">{food.product_name}</div>
-                        {food.serving_quantity ? (
-                          <div className="table-secondary-text">
-                            {food.serving_quantity} {food.serving_unit ?? 'serving'}
-                          </div>
+                        {formatServingLabel(food) ? (
+                          <div className="table-secondary-text">{formatServingLabel(food)}</div>
                         ) : null}
                       </div>
                       {food.image_url ? (

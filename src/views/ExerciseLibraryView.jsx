@@ -57,10 +57,6 @@ const ExerciseLibraryView = ({
     <div className="videos-wrapper">
       <div className="exercise-library-panel">
         <div className="exercise-library-header">
-          <div>
-            <h3>Exercise Library Cards</h3>
-            <p>Update titles and cover images shown on the app home screen.</p>
-          </div>
         </div>
         {error ? <p className="error-text">{error}</p> : null}
         {isLoading ? (

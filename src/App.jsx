@@ -35,10 +35,16 @@ import {
   createFood,
   updateFood,
   deleteFood,
+  searchUsdaFoods,
+  fetchUsdaFood,
   fetchMealsAdmin,
   createMeal,
   updateMeal,
   deleteMeal,
+  fetchProductsAdmin,
+  createProduct,
+  updateProduct,
+  deleteProduct,
 } from './services/api'
 import { uploadFileToSpaces, ensureSpacesFolders } from './services/spaces'
 import './App.css'
@@ -71,6 +77,7 @@ import QuestionsView from './views/QuestionsView'
 import ProgramsView from './views/ProgramsView'
 import FoodsView from './views/FoodsView'
 import MealsView from './views/MealsView'
+import ProductsView from './views/ProductsView'
 import PrivacyPolicyView from './views/PrivacyPolicyView'
 import DeleteAccountView from './views/DeleteAccountView'
 import Sidebar from './components/layout/Sidebar'
@@ -83,6 +90,7 @@ import ProgramScheduleModal from './components/modals/ProgramScheduleModal'
 import FoodModal from './components/modals/FoodModal'
 import FoodCategoryModal from './components/modals/FoodCategoryModal'
 import MealModal from './components/modals/MealModal'
+import ProductModal from './components/modals/ProductModal'
 // import { createLogger } from 'vite'
 
 const getInitialEmail = () => safeGetFromStorage(AUTH_EMAIL_KEY) ?? ''
@@ -135,14 +143,21 @@ const getDefaultFoodForm = () => ({
   brand: '',
   imageUrl: '',
   imageFile: null,
-  calories: '',
-  protein: '',
-  carbs: '',
-  fat: '',
-  servingQuantity: '',
-  servingUnit: 'serving',
+  foodType: 'SOLID',
+  defaultServingName: '',
+  defaultServingGrams: '',
+  densityGPerMl: '',
+  defaultServingMl: '',
+  fdcId: '',
+  caloriesPer100g: '',
+  proteinPer100g: '',
+  carbsPer100g: '',
+  fatPer100g: '',
   categoryId: '',
   isActive: true,
+  source: '',
+  sourceItemId: '',
+  sourceUrl: '',
 })
 
 const getDefaultMealForm = () => ({
@@ -157,8 +172,21 @@ const getDefaultMealForm = () => ({
   isActive: true,
 })
 
+const getDefaultProductForm = () => ({
+  id: '',
+  title: '',
+  subtitle: '',
+  badgeText: '',
+  description: '',
+  imageUrl: '',
+  imageFile: null,
+  sortOrder: '0',
+  isActive: true,
+})
+
 const FOOD_IMAGE_FOLDER = 'food-images'
 const MEAL_ICON_FOLDER = 'meal-icons'
+const PRODUCT_IMAGE_FOLDER = 'Products Image'
 
 const getDefaultCategoryForm = () => ({
   id: '',
@@ -177,6 +205,19 @@ const parseFloatValue = (value) => {
   const parsed = parseFloat(value)
   return Number.isFinite(parsed) ? parsed : null
 }
+
+const formatNumber = (value, digits = 2) => {
+  if (!Number.isFinite(value)) return ''
+  return value.toFixed(digits).replace(/\.?0+$/, '')
+}
+
+const computePer100g = (value, servingGrams) => {
+  if (!Number.isFinite(value) || !Number.isFinite(servingGrams) || servingGrams <= 0) {
+    return ''
+  }
+  return formatNumber((value / servingGrams) * 100)
+}
+
 
 const getVideoDurationSeconds = (file) =>
   new Promise((resolve) => {
@@ -643,6 +684,11 @@ function App() {
   const [isFoodModalOpen, setFoodModalOpen] = useState(false)
   const [foodForm, setFoodForm] = useState(getDefaultFoodForm)
   const [foodPending, setFoodPending] = useState(false)
+  const [usdaResults, setUsdaResults] = useState([])
+  const [usdaLoading, setUsdaLoading] = useState(false)
+  const [usdaError, setUsdaError] = useState('')
+  const [usdaDetailLoading, setUsdaDetailLoading] = useState(false)
+  const [usdaSelected, setUsdaSelected] = useState(null)
   const [foodCategories, setFoodCategories] = useState([])
   const [foodCategoriesLoading, setFoodCategoriesLoading] = useState(false)
   const [categoryModalMode, setCategoryModalMode] = useState('create')
@@ -656,6 +702,13 @@ function App() {
   const [isMealModalOpen, setMealModalOpen] = useState(false)
   const [mealForm, setMealForm] = useState(getDefaultMealForm)
   const [mealPending, setMealPending] = useState(false)
+  const [productsData, setProductsData] = useState([])
+  const [productsLoading, setProductsLoading] = useState(false)
+  const [productsError, setProductsError] = useState('')
+  const [productModalMode, setProductModalMode] = useState('create')
+  const [isProductModalOpen, setProductModalOpen] = useState(false)
+  const [productForm, setProductForm] = useState(getDefaultProductForm)
+  const [productPending, setProductPending] = useState(false)
 
   const isLoggedIn = useMemo(() => Boolean(token), [token])
   const trimmedEmail = email.trim().toLowerCase()
@@ -702,6 +755,11 @@ function App() {
         return {
           title: '',
           description: '',
+        }
+      case 'products':
+        return {
+          title: 'Store Products',
+          description: 'Manage the products shown on the app store cards.',
         }
       case 'privacyPolicy':
         return {
@@ -1081,6 +1139,22 @@ function App() {
       handleApiError(error)
     } finally {
       setMealsLoading(false)
+    }
+  }, [handleApiError, token])
+
+  const loadProducts = useCallback(async () => {
+    if (!token) return
+    setProductsLoading(true)
+    setProductsError('')
+    try {
+      const response = await fetchProductsAdmin({ includeInactive: true }, token)
+      const payload = response?.data ?? response ?? {}
+      setProductsData(payload.products ?? [])
+    } catch (error) {
+      setProductsError(error?.message ?? 'Unable to load products.')
+      handleApiError(error)
+    } finally {
+      setProductsLoading(false)
     }
   }, [handleApiError, token])
 
@@ -1500,14 +1574,97 @@ function App() {
     setFoodFilters((prev) => ({ ...prev, ...updates }))
   }, [])
 
+  const handleUsdaSearch = useCallback(async (queryInput, limit = 25) => {
+    if (!token) return
+    const query = (typeof queryInput === 'string' ? queryInput : foodForm.name).trim()
+    if (query.length < 2) {
+      setUsdaError('')
+      setUsdaResults([])
+      setUsdaSelected(null)
+      return
+    }
+    setUsdaLoading(true)
+    setUsdaError('')
+    setUsdaResults([])
+    setUsdaSelected(null)
+    try {
+      const response = await searchUsdaFoods(query, token, limit)
+      const items = response?.data?.items ?? []
+      setUsdaResults(items)
+      if (!items.length) {
+        setUsdaError('No USDA foods matched your search.')
+      }
+    } catch (error) {
+      handleApiError(error)
+      setUsdaError(error?.message ?? 'Unable to search USDA.')
+    } finally {
+      setUsdaLoading(false)
+    }
+  }, [foodForm.name, handleApiError, token])
+
+  const handleUsdaSelect = useCallback(
+    async (item) => {
+      if (!token || !item?.fdcId) return
+      setUsdaDetailLoading(true)
+      setUsdaError('')
+      try {
+        const response = await fetchUsdaFood(item.fdcId, token)
+        const detail = response?.data ?? null
+        if (!detail) {
+          setUsdaError('Unable to load USDA food details.')
+          return
+        }
+        setUsdaSelected(item)
+        setUsdaResults([])
+        setFoodForm((prev) => {
+          const caloriesPer100g =
+            detail.calories_per_100g != null ? String(detail.calories_per_100g) : ''
+          const proteinPer100g =
+            detail.protein_g_per_100g != null ? String(detail.protein_g_per_100g) : ''
+          const carbsPer100g =
+            detail.carbs_g_per_100g != null ? String(detail.carbs_g_per_100g) : ''
+          const fatPer100g = detail.fat_g_per_100g != null ? String(detail.fat_g_per_100g) : ''
+
+          return {
+            ...prev,
+            name: detail.name || prev.name,
+            brand: item.brandOwner || prev.brand,
+            foodType: prev.foodType || 'SOLID',
+            defaultServingName: prev.defaultServingName || '100 g',
+            defaultServingGrams: prev.defaultServingGrams || '100',
+            caloriesPer100g,
+            proteinPer100g,
+            carbsPer100g,
+            fatPer100g,
+            source: detail.source || 'USDA FoodData Central',
+            sourceItemId: String(detail.fdcId ?? item.fdcId),
+            sourceUrl: detail.source_url || '',
+            fdcId: String(detail.fdcId ?? item.fdcId),
+          }
+        })
+      } catch (error) {
+        handleApiError(error)
+        setUsdaError(error?.message ?? 'Unable to load USDA food details.')
+      } finally {
+        setUsdaDetailLoading(false)
+      }
+    },
+    [handleApiError, token],
+  )
+
   const openCreateFoodModal = useCallback(() => {
     setFoodModalMode('create')
     setFoodForm(getDefaultFoodForm())
+    setUsdaResults([])
+    setUsdaError('')
+    setUsdaSelected(null)
     setFoodModalOpen(true)
   }, [])
 
   const openEditFoodModal = useCallback((food) => {
     if (!food) return
+    const servingGramsValue =
+      food.default_serving_grams != null ? Number(food.default_serving_grams) : null
     setFoodModalMode('edit')
     setFoodForm({
       id: food.id,
@@ -1515,15 +1672,37 @@ function App() {
       brand: food.brand ?? '',
       imageUrl: food.image_url ?? '',
       imageFile: null,
-      calories: food.calories != null ? String(food.calories) : '',
-      protein: food.protein != null ? String(food.protein) : '',
-      carbs: food.carbs != null ? String(food.carbs) : '',
-      fat: food.fat != null ? String(food.fat) : '',
-      servingQuantity: food.serving_quantity != null ? String(food.serving_quantity) : '',
-      servingUnit: food.serving_unit ?? 'serving',
+      foodType: food.food_type ?? 'SOLID',
+      defaultServingName: food.default_serving_name ?? food.serving_unit ?? '',
+      defaultServingGrams: servingGramsValue != null ? String(servingGramsValue) : '',
+      densityGPerMl: food.density_g_per_ml != null ? String(food.density_g_per_ml) : '',
+      defaultServingMl: food.default_serving_ml != null ? String(food.default_serving_ml) : '',
+      fdcId: food.fdc_id != null ? String(food.fdc_id) : '',
+      caloriesPer100g:
+        food.calories_per_100g != null
+          ? String(food.calories_per_100g)
+          : computePer100g(Number(food.calories), servingGramsValue),
+      proteinPer100g:
+        food.protein_per_100g != null
+          ? String(food.protein_per_100g)
+          : computePer100g(Number(food.protein), servingGramsValue),
+      carbsPer100g:
+        food.carbs_per_100g != null
+          ? String(food.carbs_per_100g)
+          : computePer100g(Number(food.carbs), servingGramsValue),
+      fatPer100g:
+        food.fat_per_100g != null
+          ? String(food.fat_per_100g)
+          : computePer100g(Number(food.fat), servingGramsValue),
       categoryId: food.category_id ? String(food.category_id) : '',
       isActive: Boolean(food.is_active ?? true),
+      source: food.source ?? '',
+      sourceItemId: food.source_item_id != null ? String(food.source_item_id) : '',
+      sourceUrl: '',
     })
+    setUsdaResults([])
+    setUsdaError('')
+    setUsdaSelected(null)
     setFoodModalOpen(true)
   }, [])
 
@@ -1533,16 +1712,40 @@ function App() {
 
   const handleFoodModalSubmit = useCallback(async () => {
     if (!token) return
-    const caloriesValue = Number(foodForm.calories)
-    if (!foodForm.name.trim() || Number.isNaN(caloriesValue) || caloriesValue <= 0) {
-      setStatus({ type: 'error', text: 'Name and calories are required.' })
-      return
-    }
     const toNumber = (value) => {
       if (value === '' || value == null) return null
       const parsed = parseFloat(value)
       return Number.isNaN(parsed) ? null : parsed
     }
+    const nameValue = foodForm.name.trim()
+    const caloriesPer100gValue = toNumber(foodForm.caloriesPer100g)
+    const proteinPer100gValue = toNumber(foodForm.proteinPer100g)
+    const carbsPer100gValue = toNumber(foodForm.carbsPer100g)
+    const fatPer100gValue = toNumber(foodForm.fatPer100g)
+    const foodTypeValue = (foodForm.foodType || 'SOLID').toUpperCase()
+    const defaultServingNameValue = foodForm.defaultServingName?.trim() || '100 g'
+    const defaultServingGramsValue = toNumber(foodForm.defaultServingGrams)
+    const densityValue = toNumber(foodForm.densityGPerMl)
+    const defaultServingMlValue = toNumber(foodForm.defaultServingMl)
+    const hasCaloriesPer100g = caloriesPer100gValue != null && caloriesPer100gValue > 0
+
+    if (!nameValue || !hasCaloriesPer100g) {
+      setStatus({
+        type: 'error',
+        text: 'Name and calories per 100g are required.',
+      })
+      return
+    }
+    const normalizedServingGrams =
+      defaultServingGramsValue != null && defaultServingGramsValue > 0
+        ? defaultServingGramsValue
+        : 100
+    const normalizedDensity =
+      foodTypeValue === 'LIQUID' && densityValue != null && densityValue > 0 ? densityValue : null
+    const normalizedServingMl =
+      foodTypeValue === 'LIQUID' && defaultServingMlValue != null && defaultServingMlValue > 0
+        ? defaultServingMlValue
+        : null
     setFoodPending('saving')
     try {
       let imageUrl = foodForm.imageUrl?.trim() || ''
@@ -1553,17 +1756,23 @@ function App() {
         imageUrl = url
       }
       const payload = {
-        product_name: foodForm.name.trim(),
+        product_name: nameValue,
         brand: foodForm.brand.trim() || null,
-        calories: caloriesValue,
-        protein: toNumber(foodForm.protein),
-        carbs: toNumber(foodForm.carbs),
-        fat: toNumber(foodForm.fat),
-        serving_quantity: toNumber(foodForm.servingQuantity) ?? 1,
-        serving_unit: foodForm.servingUnit?.trim() || 'serving',
+        food_type: foodTypeValue,
+        fdc_id: foodForm.fdcId ? Number(foodForm.fdcId) : null,
+        default_serving_name: defaultServingNameValue,
+        default_serving_grams: normalizedServingGrams,
+        density_g_per_ml: normalizedDensity,
+        default_serving_ml: normalizedServingMl,
         image_url: imageUrl || null,
         category_id: foodForm.categoryId ? Number(foodForm.categoryId) : null,
         is_active: Boolean(foodForm.isActive),
+        calories_per_100g: caloriesPer100gValue,
+        protein_per_100g: proteinPer100gValue ?? 0,
+        carbs_per_100g: carbsPer100gValue ?? 0,
+        fat_per_100g: fatPer100gValue ?? 0,
+        source: foodForm.source?.trim() || null,
+        source_item_id: foodForm.sourceItemId?.trim() || null,
       }
       setFoodPending('saving')
       if (foodModalMode === 'edit' && foodForm.id) {
@@ -1707,6 +1916,103 @@ function App() {
       }
     },
     [handleApiError, loadMeals, token],
+  )
+
+  const openCreateProductModal = useCallback(() => {
+    setProductModalMode('create')
+    setProductForm(getDefaultProductForm())
+    setProductModalOpen(true)
+  }, [])
+
+  const openEditProductModal = useCallback((product) => {
+    if (!product) return
+    setProductModalMode('edit')
+    setProductForm({
+      id: product.id ?? '',
+      title: product.title ?? '',
+      subtitle: product.subtitle ?? '',
+      badgeText: product.badge_text ?? '',
+      description: product.description ?? '',
+      imageUrl: product.image_url ?? '',
+      imageFile: null,
+      sortOrder: product.sort_order != null ? String(product.sort_order) : '0',
+      isActive: Boolean(product.is_active ?? true),
+    })
+    setProductModalOpen(true)
+  }, [])
+
+  const closeProductModal = useCallback(() => {
+    setProductModalOpen(false)
+  }, [])
+
+  const handleProductModalSubmit = useCallback(async () => {
+    if (!token) return
+    const titleValue = productForm.title.trim()
+    if (!titleValue) {
+      setStatus({ type: 'error', text: 'Product title is required.' })
+      return
+    }
+    let imageUrl = productForm.imageUrl.trim()
+    const payload = {
+      title: titleValue,
+      subtitle: productForm.subtitle.trim() || null,
+      badge_text: productForm.badgeText.trim() || null,
+      description: productForm.description.trim() || null,
+      image_url: imageUrl || null,
+      sort_order: parseIntValue(productForm.sortOrder),
+      is_active: Boolean(productForm.isActive),
+    }
+    setProductPending('saving')
+    try {
+      if (productForm.imageFile) {
+        setProductPending('uploading')
+        await ensureSpacesFolders([PRODUCT_IMAGE_FOLDER])
+        const { url } = await uploadFileToSpaces(productForm.imageFile, {
+          folder: PRODUCT_IMAGE_FOLDER,
+        })
+        imageUrl = url
+        payload.image_url = imageUrl
+      }
+      if (productModalMode === 'edit' && productForm.id) {
+        const response = await updateProduct(productForm.id, payload, token)
+        setStatus({ type: 'success', text: response?.message ?? 'Product updated.' })
+      } else {
+        const response = await createProduct(payload, token)
+        setStatus({ type: 'success', text: response?.message ?? 'Product created.' })
+      }
+      setProductModalOpen(false)
+      loadProducts()
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setProductPending('')
+    }
+  }, [handleApiError, loadProducts, productForm, productModalMode, token])
+
+  const handleProductDelete = useCallback(
+    async (product) => {
+      if (!token || !product) return
+      const result = await Swal.fire({
+        title: `Delete ${product.title ?? 'this product'}?`,
+        text: 'This will permanently remove it from the database.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#FA99B5',
+        cancelButtonColor: '#94a3b8',
+        reverseButtons: true,
+      })
+      if (!result.isConfirmed) return
+      try {
+        await deleteProduct(product.id, token)
+        setStatus({ type: 'success', text: 'Product deleted.' })
+        loadProducts()
+      } catch (error) {
+        handleApiError(error)
+      }
+    },
+    [handleApiError, loadProducts, token],
   )
 
   const openCreateCategoryModal = useCallback(() => {
@@ -1878,6 +2184,12 @@ useEffect(() => {
       loadMeals()
     }
   }, [activeView, isLoggedIn, loadMeals])
+
+  useEffect(() => {
+    if (isLoggedIn && activeView === 'products') {
+      loadProducts()
+    }
+  }, [activeView, isLoggedIn, loadProducts])
 
   useEffect(() => {
     if (resendSeconds <= 0) return undefined
@@ -2694,6 +3006,16 @@ useEffect(() => {
                   onDeleteMeal={handleMealDelete}
                 />
               )}
+              {activeView === 'products' && (
+                <ProductsView
+                  products={productsData}
+                  loading={productsLoading}
+                  error={productsError}
+                  onAddProduct={openCreateProductModal}
+                  onEditProduct={openEditProductModal}
+                  onDeleteProduct={handleProductDelete}
+                />
+              )}
               {activeView === 'privacyPolicy' && <PrivacyPolicyView token={token} />}
               {activeView === 'deleteAccount' && <DeleteAccountView />}
             </main>
@@ -2755,7 +3077,14 @@ useEffect(() => {
         form={foodForm}
         setForm={setFoodForm}
         categories={foodCategories}
-        pendingAction={foodPending === 'saving' ? 'saving' : ''}
+        pendingAction={foodPending || ''}
+        usdaResults={usdaResults}
+        usdaLoading={usdaLoading}
+        usdaError={usdaError}
+        usdaDetailLoading={usdaDetailLoading}
+        usdaSelected={usdaSelected}
+        onUsdaSearch={handleUsdaSearch}
+        onUsdaSelect={handleUsdaSelect}
         onClose={closeFoodModal}
         onSubmit={handleFoodModalSubmit}
       />
@@ -2776,6 +3105,15 @@ useEffect(() => {
         pendingAction={mealPending}
         onClose={closeMealModal}
         onSubmit={handleMealModalSubmit}
+      />
+      <ProductModal
+        open={isProductModalOpen}
+        mode={productModalMode}
+        form={productForm}
+        setForm={setProductForm}
+        pendingAction={productPending}
+        onClose={closeProductModal}
+        onSubmit={handleProductModalSubmit}
       />
       <UserAnalyticsModal
         open={isUserAnalyticsOpen}
