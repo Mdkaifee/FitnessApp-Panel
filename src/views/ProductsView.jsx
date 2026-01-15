@@ -39,6 +39,7 @@ function ProductsView({
                 <th>Title</th>
                 <th>Badge</th>
                 <th>Description</th>
+                <th>Link</th>
                 <th className="align-left status-cell">
                   <div className="status-cell-content">Status</div>
                 </th>
@@ -69,6 +70,15 @@ function ProductsView({
                   </td>
                   <td>{product.badge_text ?? '—'}</td>
                   <td>{product.description ?? '—'}</td>
+                  <td>
+                    {product.link_url ? (
+                      <a href={product.link_url} target="_blank" rel="noreferrer">
+                        Open
+                      </a>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td className="align-left status-cell">
                     <div className="status-cell-content">
                       <span

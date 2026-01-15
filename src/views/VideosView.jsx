@@ -12,8 +12,23 @@ const normalizeKey = (value) => {
 }
 
 const collapseKey = (value) => normalizeKey(value).replace(/[^a-z0-9]/g, '')
+const CATEGORY_KEY_ALIASES = {
+  fullbodystrength: 'freeworkout1',
+  fullbodystregth: 'freeworkout1',
+  sportnutrition: 'freeworkout2',
+  sportsnutrition: 'freeworkout2',
+}
+
+const normalizeCategoryKey = (value) => {
+  const collapsed = collapseKey(value)
+  return CATEGORY_KEY_ALIASES[collapsed] ?? collapsed
+}
+
 const CATEGORY_LABEL_LOOKUP = VIDEO_CATEGORIES.reduce((acc, category) => {
-  acc[normalizeKey(category.value)] = category.label
+  const valueKey = normalizeCategoryKey(category.value)
+  const labelKey = normalizeCategoryKey(category.label)
+  acc[valueKey] = category.label
+  acc[labelKey] = category.label
   return acc
 }, {})
 
@@ -48,12 +63,9 @@ function VideosView({
 
   const categoryCountsLookup = useMemo(() => {
     return Object.entries(categoryCounts ?? {}).reduce((acc, [key, value]) => {
-      const normalizedKey = normalizeKey(key)
-      const collapsedKey = collapseKey(key)
+      const normalizedKey = normalizeCategoryKey(key)
       const numericValue = Number(value) || 0
-      acc[key] = numericValue
-      if (normalizedKey) acc[normalizedKey] = numericValue
-      if (collapsedKey) acc[collapsedKey] = numericValue
+      if (normalizedKey) acc[normalizedKey] = (acc[normalizedKey] ?? 0) + numericValue
       return acc
     }, {})
   }, [categoryCounts])
@@ -132,16 +144,16 @@ function VideosView({
 
 
   const currentBodyPartValue = videoCategory === ALL_VIDEOS_CATEGORY ? '' : videoCategory
-  const normalizedBodyPartFilter = normalizeKey(currentBodyPartValue)
+  const normalizedBodyPartFilter = normalizeCategoryKey(currentBodyPartValue)
   const normalizedGenderFilter = normalizeKey(videoGender)
-  const shouldFilterCategory = Boolean(normalizedBodyPartFilter)
+  const shouldFilterCategory = normalizedBodyPartFilter.length > 0
   const shouldFilterGender =
     normalizedGenderFilter.length > 0 && normalizedGenderFilter !== 'all'
 
   const filteredList = useMemo(() => {
     if (!shouldFilterCategory && !shouldFilterGender) return list
     return list.filter((video) => {
-      const videoBodyPart = normalizeKey(video?.body_part ?? video?.bodyPart ?? '')
+      const videoBodyPart = normalizeCategoryKey(video?.body_part ?? video?.bodyPart ?? '')
       const videoGenderValue = normalizeKey(video?.gender ?? '')
       const matchesCategory = !shouldFilterCategory || videoBodyPart === normalizedBodyPartFilter
       const matchesGender = !shouldFilterGender || videoGenderValue === normalizedGenderFilter
@@ -170,13 +182,9 @@ function VideosView({
             >
               <option value="">All body parts</option>
               {VIDEO_CATEGORIES.map((cat) => {
-                const collapsedKey = collapseKey(cat.value)
-                const normalizedCatValue = normalizeKey(cat.value)
+                const normalizedCatValue = normalizeCategoryKey(cat.value)
                 const count =
-                  categoryCountsLookup?.[cat.value] ??
-                  categoryCountsLookup?.[normalizedCatValue] ??
-                  categoryCountsLookup?.[collapsedKey] ??
-                  0
+                  categoryCountsLookup?.[normalizedCatValue] ?? 0
                 return (
                   <option key={cat.value} value={cat.value}>
                     {cat.label} ({count})
@@ -233,8 +241,8 @@ function VideosView({
               const durationLabel = formatDuration(video)
               const genderIcon = getGenderIcon(video.gender)
               const rawCategory = video.body_part ?? video.bodyPart ?? ''
-              const categoryLabel =
-                CATEGORY_LABEL_LOOKUP[normalizeKey(rawCategory)] ?? rawCategory ?? '—'
+              const normalizedCategory = normalizeCategoryKey(rawCategory)
+              const categoryLabel = CATEGORY_LABEL_LOOKUP[normalizedCategory] ?? rawCategory ?? '—'
               return (
                 <div className="video-card" key={video.id}>
                   <div className="video-thumb">

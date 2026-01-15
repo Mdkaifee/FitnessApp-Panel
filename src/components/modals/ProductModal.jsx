@@ -63,6 +63,16 @@ function ProductModal({ open, mode, form, setForm, pendingAction, onClose, onSub
         </label>
 
         <label className="modal-field">
+          <span>Product Link</span>
+          <input
+            type="url"
+            value={form.linkUrl}
+            onChange={(event) => handleChange('linkUrl', event.target.value)}
+            placeholder="https://example.com/product"
+          />
+        </label>
+
+        <label className="modal-field">
           <span>Image upload</span>
           <input
             type="file"

@@ -49,8 +49,8 @@ export const VIDEO_CATEGORIES = [
   { label: 'Arms', value: 'Arms' },
   { label: 'Legs', value: 'Legs' },
   { label: 'Full Body', value: 'FullBody' },
-  { label: 'FREE WORKOUT #1', value: 'FullBodyStrength' },
-  { label: 'FREE WORKOUT #2', value: 'SportNutrition' },
+  { label: 'FREE WORKOUT #1', value: 'FREE WORKOUT #1' },
+  { label: 'FREE WORKOUT #2', value: 'FREE WORKOUT #2' },
 ]
 
 export const VIDEO_GENDERS = [

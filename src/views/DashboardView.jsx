@@ -26,12 +26,29 @@ const labelForGender = (input) => {
   }
 }
 
+const CATEGORY_LABEL_OVERRIDES = {
+  fullbodystrength: 'FREE WORKOUT #1',
+  fullbodystregth: 'FREE WORKOUT #1',
+  sportnutrition: 'FREE WORKOUT #2',
+  sportsnutrition: 'FREE WORKOUT #2',
+  freeworkout1: 'FREE WORKOUT #1',
+  freeworkout2: 'FREE WORKOUT #2',
+}
+
+const normalizeCategoryLabel = (label) => {
+  if (!label) return label
+  const labelText = String(label)
+  const normalizedKey = labelText.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return CATEGORY_LABEL_OVERRIDES[normalizedKey] ?? labelText
+}
+
 const normalizeCategoryEntries = (raw) => {
   if (!raw) return []
   if (Array.isArray(raw)) {
     return raw
       .map((item) => {
-        const label = item?.label ?? item?.category ?? item?.name
+        const rawLabel = item?.label ?? item?.category ?? item?.name
+        const label = normalizeCategoryLabel(rawLabel)
         const value = Number(item?.value ?? item?.count ?? item?.total ?? 0)
         if (!label) return null
         return { label, value: Number.isFinite(value) ? value : 0 }
@@ -39,7 +56,7 @@ const normalizeCategoryEntries = (raw) => {
       .filter(Boolean)
   }
   return Object.entries(raw).map(([label, value]) => ({
-    label,
+    label: normalizeCategoryLabel(label),
     value: Number.isFinite(Number(value)) ? Number(value) : 0,
   }))
 }
@@ -74,7 +91,8 @@ const normalizeCategoryGenderEntries = (raw) => {
   payload.forEach((entry) => {
     if (entry?.entries && Array.isArray(entry.entries)) {
       entry.entries.forEach((inner) => {
-        const category = inner?.category ?? entry.category ?? entry.label
+        const rawCategory = inner?.category ?? entry.category ?? entry.label
+        const category = normalizeCategoryLabel(rawCategory)
         const gender = inner?.gender ?? inner?.label ?? 'Unspecified'
         const value = Number(inner?.count ?? inner?.value ?? inner?.total ?? 0)
         if (!category) return
@@ -86,7 +104,8 @@ const normalizeCategoryGenderEntries = (raw) => {
       })
       return
     }
-    const category = entry?.category ?? entry?.label ?? entry?.name
+    const rawCategory = entry?.category ?? entry?.label ?? entry?.name
+    const category = normalizeCategoryLabel(rawCategory)
     const gender = entry?.gender ?? entry?.key ?? 'Unspecified'
     const value = Number(entry?.count ?? entry?.value ?? entry?.total ?? 0)
     if (!category) return

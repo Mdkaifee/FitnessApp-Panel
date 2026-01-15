@@ -110,9 +110,32 @@ const getDefaultVideoForm = () => ({
   thumbnailFile: null,
 })
 
+const VIDEO_BODY_PART_ALIASES = {
+  fullbodystrength: 'FREE WORKOUT #1',
+  fullbodystregth: 'FREE WORKOUT #1',
+  sportnutrition: 'FREE WORKOUT #2',
+  sportsnutrition: 'FREE WORKOUT #2',
+  freeworkout1: 'FREE WORKOUT #1',
+  freeworkout2: 'FREE WORKOUT #2',
+}
+
+const VIDEO_BODY_PART_FOLDERS = {
+  'FREE WORKOUT #1': 'FullBodyStrength',
+  'FREE WORKOUT #2': 'SportNutrition',
+}
+
+const normalizeVideoBodyPart = (value) => {
+  if (!value) return ''
+  const text = String(value).trim()
+  const key = text.toLowerCase().replace(/[^a-z0-9]/g, '')
+  if (!key) return text
+  return VIDEO_BODY_PART_ALIASES[key] ?? text
+}
+
 const getVideoUploadFolder = (bodyPart) => {
   if (typeof bodyPart === 'string' && bodyPart.trim()) {
-    return bodyPart.trim()
+    const normalizedBodyPart = normalizeVideoBodyPart(bodyPart)
+    return VIDEO_BODY_PART_FOLDERS[normalizedBodyPart] ?? normalizedBodyPart
   }
   return 'videos'
 }
@@ -178,6 +201,7 @@ const getDefaultProductForm = () => ({
   subtitle: '',
   badgeText: '',
   description: '',
+  linkUrl: '',
   imageUrl: '',
   imageFile: null,
   sortOrder: '0',
@@ -540,7 +564,7 @@ const deriveCategoryCountsFromVideos = (videos) => {
       (typeof video?.body_part === 'string' && video.body_part.trim()) ||
       (typeof video?.bodyPart === 'string' && video.bodyPart.trim()) ||
       ''
-    const key = rawBodyPart || 'Uncategorized'
+    const key = normalizeVideoBodyPart(rawBodyPart) || 'Uncategorized'
     acc[key] = (acc[key] || 0) + 1
     return acc
   }, {})
@@ -631,7 +655,8 @@ function App() {
           if (!category?.value || typeof category.value !== 'string') return []
           const trimmed = category.value.trim()
           if (!trimmed) return []
-          return [trimmed, `${trimmed}/thumbnails`]
+          const baseFolder = getVideoUploadFolder(trimmed)
+          return [baseFolder, `${baseFolder}/thumbnails`]
         })
         folders.push('exercise-library')
         await ensureSpacesFolders(folders)
@@ -1933,6 +1958,7 @@ function App() {
       subtitle: product.subtitle ?? '',
       badgeText: product.badge_text ?? '',
       description: product.description ?? '',
+      linkUrl: product.link_url ?? '',
       imageUrl: product.image_url ?? '',
       imageFile: null,
       sortOrder: product.sort_order != null ? String(product.sort_order) : '0',
@@ -1958,6 +1984,7 @@ function App() {
       subtitle: productForm.subtitle.trim() || null,
       badge_text: productForm.badgeText.trim() || null,
       description: productForm.description.trim() || null,
+      link_url: productForm.linkUrl.trim() || null,
       image_url: imageUrl || null,
       sort_order: parseIntValue(productForm.sortOrder),
       is_active: Boolean(productForm.isActive),
@@ -2405,7 +2432,7 @@ useEffect(() => {
     setVideoModalMode('edit')
     setVideoForm({
       videoId: String(video.id),
-      bodyPart: video.body_part ?? VIDEO_CATEGORIES[0].value,
+      bodyPart: normalizeVideoBodyPart(video.body_part) || VIDEO_CATEGORIES[0].value,
       gender: video.gender ?? VIDEO_GENDERS[0].value,
       title: video.title ?? '',
       description: video.description ?? '',
