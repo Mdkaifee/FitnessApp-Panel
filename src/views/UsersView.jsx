@@ -41,6 +41,7 @@ function UsersView({
     { label: 'Gender', align: 'left' },
     { label: 'Pilates Board', align: 'center' },
     { label: 'Ankle/Wrist', align: 'center' },
+    { label: 'Purchased Plan', align: 'center' },
     { label: 'Status', align: 'center' },
     { label: 'Photo', align: 'center' },
     { label: 'Actions', align: 'right' },
@@ -135,6 +136,20 @@ function UsersView({
                           })
                         }
                         aria-label="Ankle wrist weights purchased"
+                      />
+                    </td>
+                    <td className="align-center">
+                      <input
+                        type="checkbox"
+                        className="user-flag-toggle"
+                        checked={Boolean(user.purchased_plan)}
+                        disabled={isFlagDisabled}
+                        onChange={() =>
+                          onToggleFlag?.(user.id, {
+                            purchased_plan: !user.purchased_plan,
+                          })
+                        }
+                        aria-label="Premium plan purchased"
                       />
                     </td>
                     <td className="align-center">
