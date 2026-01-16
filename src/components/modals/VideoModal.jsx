@@ -4,6 +4,8 @@ import { VIDEO_CATEGORIES, VIDEO_GENDERS } from '../../constants'
 function VideoModal({ open, mode, form, setForm, pendingAction, onClose, onSubmit }) {
   if (!open) return null
 
+  const isFreeWorkout = String(form.bodyPart ?? '').toUpperCase().includes('FREE WORKOUT')
+
   const handleSubmit = (event) => {
     event.preventDefault()
     onSubmit()
@@ -11,7 +13,18 @@ function VideoModal({ open, mode, form, setForm, pendingAction, onClose, onSubmi
 
   const handleFieldChange = (field) => (event) => {
     const { value } = event.target
-    setForm((prev) => ({ ...prev, [field]: value }))
+    setForm((prev) => {
+      if (field !== 'bodyPart') {
+        return { ...prev, [field]: value }
+      }
+      const wasFreeWorkout = String(prev.bodyPart ?? '').toUpperCase().includes('FREE WORKOUT')
+      const nextIsFreeWorkout = String(value ?? '').toUpperCase().includes('FREE WORKOUT')
+      return {
+        ...prev,
+        bodyPart: value,
+        requiresPayment: nextIsFreeWorkout ? false : wasFreeWorkout ? true : prev.requiresPayment,
+      }
+    })
   }
 
   const handleFileChange = (field) => (event) => {
@@ -102,6 +115,24 @@ function VideoModal({ open, mode, form, setForm, pendingAction, onClose, onSubmi
                 <span className="video-field-hint">Max 50 characters</span>
               </label>
             </div>
+            {/* <div className="video-field-row">
+              <label className="video-field">
+                <span className="video-field-label">Paid Access</span>
+                <label className="video-toggle">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.requiresPayment)}
+                    disabled={isFreeWorkout}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, requiresPayment: event.target.checked }))
+                    }
+                  />
+                  <span>
+                    {isFreeWorkout ? 'Free workout videos are always free' : 'Require payment to watch'}
+                  </span>
+                </label>
+              </label>
+            </div> */}
           </section>
 
           <section className="video-section">

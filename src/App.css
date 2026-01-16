@@ -2019,6 +2019,14 @@ button.secondary {
   margin-left: auto;
 }
 
+.videos-bulk-toggle {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  padding: 6px 12px;
+  font-size: 0.84rem;
+}
+
 .videos-upload-button {
   border: none;
   border-radius: 12px;
@@ -2335,6 +2343,20 @@ button.secondary {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.video-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.video-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #FA99B5;
 }
 
 .error-text {

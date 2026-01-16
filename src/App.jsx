@@ -102,12 +102,16 @@ const getInitialAuthStep = () => {
   return window.location.pathname === '/verify-otp' ? 'otp' : 'login'
 }
 
+const isFreeWorkoutCategory = (value) =>
+  String(value ?? '').toUpperCase().includes('FREE WORKOUT')
+
 const getDefaultVideoForm = () => ({
   videoId: '',
   bodyPart: VIDEO_CATEGORIES[0].value,
   gender: VIDEO_GENDERS[0].value,
   title: '',
   description: '',
+  requiresPayment: !isFreeWorkoutCategory(VIDEO_CATEGORIES[0].value),
   videoFile: null,
   thumbnailFile: null,
 })
@@ -640,6 +644,8 @@ function App() {
   const [videosError, setVideosError] = useState(null)
   const [videoPage, setVideoPage] = useState(1)
   const [videoPending, setVideoPending] = useState('')
+  const [bulkPaymentValue, setBulkPaymentValue] = useState(true)
+  const [bulkPaymentPending, setBulkPaymentPending] = useState(false)
   const [exerciseLibraryItems, setExerciseLibraryItems] = useState([])
   const [exerciseLibraryLoading, setExerciseLibraryLoading] = useState(false)
   const [exerciseLibraryError, setExerciseLibraryError] = useState('')
@@ -1059,6 +1065,66 @@ function App() {
       }
     },
     [handleApiError, token],
+  )
+
+  useEffect(() => {
+    if (bulkPaymentPending) return
+    const currentVideos = Array.isArray(videosData?.videos) ? videosData.videos : []
+    const eligibleVideos = currentVideos.filter(
+      (video) => !isFreeWorkoutCategory(video?.body_part ?? video?.bodyPart ?? ''),
+    )
+    if (eligibleVideos.length === 0) return
+    const allPaid = eligibleVideos.every((video) =>
+      Boolean(video?.requires_payment ?? video?.requiresPayment ?? false),
+    )
+    setBulkPaymentValue(allPaid)
+  }, [bulkPaymentPending, videosData])
+
+  const fetchAllVideosForBulkUpdate = useCallback(
+    async (categoryValue, genderValue) => {
+      if (!token) return []
+      const targetCategory = categoryValue ?? ALL_VIDEOS_CATEGORY
+      const normalizedCategory =
+        !targetCategory || targetCategory === ALL_VIDEOS_CATEGORY ? 'all' : targetCategory
+      const normalizedGender = genderValue && genderValue !== 'All' ? genderValue : ''
+      const pageSize = 100
+      let page = 1
+      const allVideos = []
+
+      while (true) {
+        const response = await fetchVideosByCategory(
+          normalizedCategory,
+          token,
+          page,
+          pageSize,
+          { gender: normalizedGender },
+        )
+        const payload = response?.data ?? {}
+        const videos = Array.isArray(payload?.videos) ? payload.videos : []
+        allVideos.push(...videos)
+        const pageSizeValue = payload?.page_size ?? payload?.pageSize ?? pageSize
+        const total =
+          payload?.total ??
+          payload?.count ??
+          payload?.total_count ??
+          payload?.totalCount ??
+          null
+        const pageCount =
+          payload?.pageCount ??
+          (total != null ? Math.ceil(Math.max(total, 0) / pageSizeValue) : null)
+
+        if (pageCount) {
+          if (page >= pageCount) break
+        } else if (videos.length < pageSizeValue) {
+          break
+        }
+
+        page += 1
+      }
+
+      return allVideos
+    },
+    [token],
   )
 
   const loadExerciseLibrary = useCallback(async () => {
@@ -2494,13 +2560,18 @@ useEffect(() => {
   // console.log('ABCD', {shouldShowAuth,isLoggedIn,activeView})
 
   const openEditVideoModal = (video) => {
+    const bodyPart = normalizeVideoBodyPart(video.body_part) || VIDEO_CATEGORIES[0].value
+    const isFreeWorkout = isFreeWorkoutCategory(bodyPart)
     setVideoModalMode('edit')
     setVideoForm({
       videoId: String(video.id),
-      bodyPart: normalizeVideoBodyPart(video.body_part) || VIDEO_CATEGORIES[0].value,
+      bodyPart,
       gender: video.gender ?? VIDEO_GENDERS[0].value,
       title: video.title ?? '',
       description: video.description ?? '',
+      requiresPayment: isFreeWorkout
+        ? false
+        : Boolean(video.requires_payment ?? video.requiresPayment ?? false),
       videoFile: null,
       thumbnailFile: null,
     })
@@ -2526,6 +2597,7 @@ useEffect(() => {
       }
       setVideoPending('upload')
       try {
+        const isFreeWorkout = isFreeWorkoutCategory(videoForm.bodyPart)
         const videoFolder = getVideoUploadFolder(videoForm.bodyPart)
         const thumbnailFolder = getThumbnailUploadFolder(videoForm.bodyPart)
         const durationSeconds = await getVideoDurationSeconds(videoForm.videoFile)
@@ -2539,6 +2611,7 @@ useEffect(() => {
           title: trimmedTitle,
           video_url: uploadedVideo.url,
           thumbnail_url: uploadedThumbnail.url,
+          requires_payment: isFreeWorkout ? false : Boolean(videoForm.requiresPayment),
         }
         if (durationSeconds) {
           payload.duration_seconds = durationSeconds
@@ -2565,7 +2638,9 @@ useEffect(() => {
 
     setVideoPending('update')
     try {
+      const isFreeWorkout = isFreeWorkoutCategory(videoForm.bodyPart)
       const payload = {}
+      payload.requires_payment = isFreeWorkout ? false : Boolean(videoForm.requiresPayment)
       if (videoForm.bodyPart) {
         payload.body_part = videoForm.bodyPart
       }
@@ -2616,6 +2691,67 @@ useEffect(() => {
       setVideoPending('')
     }
   }
+
+  const handleBulkPaymentChange = useCallback(
+    async (nextValue) => {
+      if (!token || bulkPaymentPending) return
+      setBulkPaymentPending(true)
+      try {
+        const videos = await fetchAllVideosForBulkUpdate(videoCategory, videoGender)
+        const eligibleVideos = videos.filter(
+          (video) => !isFreeWorkoutCategory(video?.body_part ?? video?.bodyPart ?? ''),
+        )
+        if (eligibleVideos.length === 0) {
+          setStatus({
+            type: 'success',
+            text: 'No eligible videos found for bulk access updates.',
+          })
+          return
+        }
+        setBulkPaymentValue(nextValue)
+        const targetVideos = eligibleVideos.filter((video) => {
+          const requiresPayment = Boolean(video?.requires_payment ?? video?.requiresPayment ?? false)
+          return requiresPayment !== nextValue
+        })
+
+        if (targetVideos.length === 0) {
+          setStatus({
+            type: 'success',
+            text: `All eligible videos are already ${nextValue ? 'paid' : 'free'}.`,
+          })
+          setBulkPaymentValue(nextValue)
+          return
+        }
+
+        for (const video of targetVideos) {
+          await updateVideo(video.id, { requires_payment: nextValue }, token)
+        }
+
+        setStatus({
+          type: 'success',
+          text: `Updated ${targetVideos.length} video${targetVideos.length === 1 ? '' : 's'} to ${
+            nextValue ? 'paid' : 'free'
+          }.`,
+        })
+        setBulkPaymentValue(nextValue)
+        loadVideos(videoCategory, videoPage, videoGender)
+      } catch (error) {
+        handleApiError(error)
+      } finally {
+        setBulkPaymentPending(false)
+      }
+    },
+    [
+      bulkPaymentPending,
+      fetchAllVideosForBulkUpdate,
+      handleApiError,
+      loadVideos,
+      token,
+      videoCategory,
+      videoGender,
+      videoPage,
+    ],
+  )
 
   const handleExerciseLibrarySave = useCallback(
     async (itemId, { title, file } = {}) => {
@@ -3024,6 +3160,9 @@ useEffect(() => {
                   videoCategory={videoCategory}
                   videoGender={videoGender}
                   videoPending={videoPending}
+                  bulkPaymentValue={bulkPaymentValue}
+                  bulkPaymentPending={bulkPaymentPending}
+                  onBulkPaymentChange={handleBulkPaymentChange}
                   onCategoryChange={handleVideoCategoryChange}
                   onGenderChange={handleVideoGenderChange}
                   onResetFilters={handleVideoFiltersReset}

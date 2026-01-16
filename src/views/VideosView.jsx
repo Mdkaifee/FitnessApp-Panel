@@ -48,6 +48,9 @@ function VideosView({
   onEditVideo,
   onDeleteVideo,
   onUploadVideo,
+  bulkPaymentValue = false,
+  bulkPaymentPending = false,
+  onBulkPaymentChange,
   currentPage = 1,
   totalPages = 1,
   onPageChange,
@@ -142,6 +145,47 @@ function VideosView({
     onGenderChange?.(value)
   }
 
+  const buildBulkScopeLabel = () => {
+    const parts = []
+    if (currentBodyPartValue) {
+      const normalizedCategory = normalizeCategoryKey(currentBodyPartValue)
+      parts.push(CATEGORY_LABEL_LOOKUP[normalizedCategory] ?? currentBodyPartValue)
+    } else {
+      parts.push('all body parts')
+    }
+    if (videoGender && String(videoGender).toLowerCase() !== 'all') {
+      parts.push(String(videoGender).toLowerCase())
+    }
+    return parts.join(' · ')
+  }
+
+  const handleBulkPaymentToggle = (event) => {
+    const nextValue = event.target.checked
+    if (!onBulkPaymentChange) return
+    const scopeLabel = buildBulkScopeLabel()
+    const actionLabel = nextValue ? 'paid' : 'free'
+    Swal.fire({
+      title: `Make ${scopeLabel} videos ${actionLabel}?`,
+      text: 'This updates every video in the current filters. Free workouts stay free.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, update all',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      confirmButtonColor: '#ec4899',
+      cancelButtonColor: '#94a3b8',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        onBulkPaymentChange(nextValue)
+      }
+    })
+  }
+
+  const bulkToggleLabel = bulkPaymentPending
+    ? 'Updating...'
+    : bulkPaymentValue
+      ? 'All videos paid'
+      : 'All videos free'
 
   const currentBodyPartValue = videoCategory === ALL_VIDEOS_CATEGORY ? '' : videoCategory
   const normalizedBodyPartFilter = normalizeCategoryKey(currentBodyPartValue)
@@ -212,6 +256,15 @@ function VideosView({
           </button> */}
         </div>
         <div className="videos-filter-actions">
+          <label className="video-toggle videos-bulk-toggle">
+            <input
+              type="checkbox"
+              checked={bulkPaymentValue}
+              disabled={bulkPaymentPending || list.length === 0 || !onBulkPaymentChange}
+              onChange={handleBulkPaymentToggle}
+            />
+            <span>{bulkToggleLabel}</span>
+          </label>
           <button
             type="button"
             className="videos-upload-button"
