@@ -2314,6 +2314,15 @@ button.secondary {
   background: var(--color-surface);
 }
 
+.video-form select:focus,
+.video-form input[type='file']:focus,
+.video-form input[type='text']:focus,
+.video-form textarea:focus {
+  outline: none;
+  border-color: #FA99B5;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
+}
+
 .video-form textarea {
   resize: vertical;
 }

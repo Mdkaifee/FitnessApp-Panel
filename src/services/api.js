@@ -387,3 +387,10 @@ export const deleteProduct = (productId, token) =>
     method: 'DELETE',
     token,
   })
+
+export const sendAdminNotification = (payload, token) =>
+  apiRequest('/notifications/admin/send', {
+    method: 'POST',
+    body: payload,
+    token,
+  })

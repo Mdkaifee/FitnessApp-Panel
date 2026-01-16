@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { id: 'foods', label: 'Foods', icon: '/food.png' },
   { id: 'meals', label: 'Meals', icon: '/meals.png' },
   { id: 'products', label: 'Products', icon: '/product.png' },
+  { id: 'notifications', label: 'Notifications', icon: '/notification.png' },
   { id: 'privacyPolicy', label: 'Legal Documents', icon: '/legal.png' },
 ]
 

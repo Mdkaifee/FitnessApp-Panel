@@ -45,6 +45,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  sendAdminNotification,
 } from './services/api'
 import { uploadFileToSpaces, ensureSpacesFolders } from './services/spaces'
 import './App.css'
@@ -78,6 +79,7 @@ import ProgramsView from './views/ProgramsView'
 import FoodsView from './views/FoodsView'
 import MealsView from './views/MealsView'
 import ProductsView from './views/ProductsView'
+import NotificationsView from './views/NotificationsView'
 import PrivacyPolicyView from './views/PrivacyPolicyView'
 import DeleteAccountView from './views/DeleteAccountView'
 import Sidebar from './components/layout/Sidebar'
@@ -206,6 +208,14 @@ const getDefaultProductForm = () => ({
   imageFile: null,
   sortOrder: '0',
   isActive: true,
+})
+
+const getDefaultNotificationForm = () => ({
+  title: '',
+  body: '',
+  audience: 'all',
+  emails: '',
+  userIds: '',
 })
 
 const FOOD_IMAGE_FOLDER = 'food-images'
@@ -734,6 +744,8 @@ function App() {
   const [isProductModalOpen, setProductModalOpen] = useState(false)
   const [productForm, setProductForm] = useState(getDefaultProductForm)
   const [productPending, setProductPending] = useState(false)
+  const [notificationForm, setNotificationForm] = useState(getDefaultNotificationForm)
+  const [notificationPending, setNotificationPending] = useState(false)
 
   const isLoggedIn = useMemo(() => Boolean(token), [token])
   const trimmedEmail = email.trim().toLowerCase()
@@ -785,6 +797,11 @@ function App() {
         return {
           title: 'Store Products',
           description: 'Manage the products shown on the app store cards.',
+        }
+      case 'notifications':
+        return {
+          title: 'Notifications',
+          description: 'Send push notifications to customers or targeted groups.',
         }
       case 'privacyPolicy':
         return {
@@ -2042,6 +2059,54 @@ function App() {
     [handleApiError, loadProducts, token],
   )
 
+  const handleNotificationChange = useCallback((patch) => {
+    setNotificationForm((prev) => ({ ...prev, ...patch }))
+  }, [])
+
+  const handleSendNotification = useCallback(async () => {
+    if (!token) return
+    const title = notificationForm.title.trim()
+    const body = notificationForm.body.trim()
+    if (!title || !body) {
+      setStatus({ type: 'error', text: 'Title and message are required.' })
+      return
+    }
+    const payload = { title, body, audience: notificationForm.audience }
+    if (notificationForm.audience === 'emails') {
+      const emails = notificationForm.emails
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+      if (!emails.length) {
+        setStatus({ type: 'error', text: 'Add at least one email address.' })
+        return
+      }
+      payload.emails = emails
+    }
+    if (notificationForm.audience === 'user_ids') {
+      const ids = notificationForm.userIds
+        .split(',')
+        .map((value) => parseInt(value.trim(), 10))
+        .filter((value) => Number.isFinite(value))
+      if (!ids.length) {
+        setStatus({ type: 'error', text: 'Add at least one user ID.' })
+        return
+      }
+      payload.user_ids = ids
+    }
+
+    setNotificationPending(true)
+    try {
+      const response = await sendAdminNotification(payload, token)
+      setStatus({ type: 'success', text: response?.message ?? 'Notification sent.' })
+      setNotificationForm(getDefaultNotificationForm())
+    } catch (error) {
+      handleApiError(error)
+    } finally {
+      setNotificationPending(false)
+    }
+  }, [handleApiError, notificationForm, token])
+
   const openCreateCategoryModal = useCallback(() => {
     setCategoryModalMode('create')
     setCategoryForm(getDefaultCategoryForm())
@@ -3041,6 +3106,14 @@ useEffect(() => {
                   onAddProduct={openCreateProductModal}
                   onEditProduct={openEditProductModal}
                   onDeleteProduct={handleProductDelete}
+                />
+              )}
+              {activeView === 'notifications' && (
+                <NotificationsView
+                  form={notificationForm}
+                  onChange={handleNotificationChange}
+                  onSubmit={handleSendNotification}
+                  pending={notificationPending}
                 />
               )}
               {activeView === 'privacyPolicy' && <PrivacyPolicyView token={token} />}
